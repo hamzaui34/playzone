@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bubble Shooter</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; user-select: none; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; font-family: 'Segoe UI', system-ui, sans-serif; }
+    #game-container { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(180deg, #0a0a1a 0%, #1a1a3a 100%); }
+    
+    .ui-bar { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 12px 16px; z-index: 10; background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%); }
+    .stat-box { text-align: center; }
+    .stat-label { font-size: 10px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1px; }
+    .stat-value { font-size: 22px; font-weight: 800; }
+    .score-value { color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.5); }
+    .level-value { color: #ff00ff; text-shadow: 0 0 10px rgba(255,0,255,0.5); }
+    .shots-value { color: #ffaa00; }
+    
+    #game-canvas { display: block; border-radius: 8px; box-shadow: 0 0 40px rgba(0,255,255,0.2); }
+    
+    .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(10, 10, 26, 0.97); z-index: 20; }
+    .screen.hidden { display: none; }
+    .screen-title { font-size: 48px; font-weight: 900; background: linear-gradient(135deg, #00ffff, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px; }
+    .screen-subtitle { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 24px; }
+    .btn { padding: 16px 40px; font-size: 18px; font-weight: 800; color: white; background: linear-gradient(135deg, #00ffff, #ff00ff); border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 0 30px rgba(0,255,255,0.5), 0 0 60px rgba(255,0,255,0.3); transition: transform 0.2s, box-shadow 0.2s; }
+    .btn:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(0,255,255,0.7), 0 0 80px rgba(255,0,255,0.5); }
+    .btn:active { transform: scale(0.95); }
+    
+    .instructions { color: rgba(255,255,255,0.6); font-size: 14px; margin-top: 20px; text-align: center; line-height: 1.6; }
+    .final-score { font-size: 64px; font-weight: 900; color: #00ffff; text-shadow: 0 0 20px rgba(0,255,255,0.8); margin: 16px 0; }
+    .final-label { font-size: 14px; color: rgba(255,255,255,0.6); }
+    
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .floating { animation: float 3s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div class="ui-bar">
+      <div class="stat-box">
+        <div class="stat-label">Score</div>
+        <div class="stat-value score-value" id="score">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Level</div>
+        <div class="stat-value level-value" id="level">1</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Shots</div>
+        <div class="stat-value shots-value" id="shots">0</div>
+      </div>
+    </div>
+    
+    <canvas id="game-canvas"></canvas>
+    
+    <div id="menu-screen" class="screen">
+      <div class="screen-title floating">BUBBLE SHOOTER</div>
+      <div class="screen-subtitle">Pop all bubbles to win!</div>
+      <button class="btn" id="start-btn">PLAY</button>
+      <div class="instructions">
+        Tap or click to shoot<br>
+        Match 3+ bubbles to pop<br>
+        Don't let bubbles reach the bottom!
+      </div>
+    </div>
+    
+    <div id="level-screen" class="screen hidden">
+      <div class="screen-title" id="level-title">LEVEL 2</div>
+      <div class="screen-subtitle">Get ready!</div>
+      <button class="btn" id="continue-btn">CONTINUE</button>
+    </div>
+    
+    <div id="gameover-screen" class="screen hidden">
+      <div class="screen-title" style="color:#ff00ff;">GAME OVER</div>
+      <div class="final-label">Final Score</div>
+      <div class="final-score" id="final-score">0</div>
+      <button class="btn" id="restart-btn">PLAY AGAIN</button>
+    </div>
+    
+    <div id="win-screen" class="screen hidden">
+      <div class="screen-title" style="color:#00ff00;">YOU WIN!</div>
+      <div class="final-label">Final Score</div>
+      <div class="final-score" id="win-score">0</div>
+      <button class="btn" id="play-again-btn">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const levelEl = document.getElementById('level');
+    const shotsEl = document.getElementById('shots');
+    const menuScreen = document.getElementById('menu-screen');
+    const levelScreen = document.getElementById('level-screen');
+    const gameoverScreen = document.getElementById('gameover-screen');
+    const winScreen = document.getElementById('win-screen');
+    const finalScoreEl = document.getElementById('final-score');
+    const winScoreEl = document.getElementById('win-score');
+    const levelTitleEl = document.getElementById('level-title');
+    
+    let width, height, gridCols, gridRows, bubbleRadius, bubbleSpacing;
+    let grid = [];
+    let shooterBubble = null;
+    let nextBubble = null;
+    let aimAngle = -Math.PI / 2;
+    let bullets = [];
+    let explosions = [];
+    let score, level, shots, gameRunning = false;
+    let cannonX, cannonY;
+    let lastShotTime = 0;
+    
+    const colors = [
+      '#ff3366', '#33ff66', '#3366ff', '#ffff33', '#ff33ff', '#33ffff',
+      '#ff6633', '#66ff33', '#6633ff', '#ff66ff', '#66ffff', '#ffff66'
+    ];
+    const glowColors = [
+      'rgba(255,51,102,0.6)', 'rgba(51,255,102,0.6)', 'rgba(51,102,255,0.6)',
+      'rgba(255,255,51,0.6)', 'rgba(255,51,255,0.6)', 'rgba(51,255,255,0.6)'
+    ];
+    
+    const levelConfigs = [
+      { rows: 5, cols: 10, colors: 4 },
+      { rows: 6, cols: 10, colors: 5 },
+      { rows: 7, cols: 10, colors: 5 },
+      { rows: 8, cols: 10, colors: 6 },
+      { rows: 9, cols: 11, colors: 6 },
+      { rows: 10, cols: 11, colors: 7 },
+      { rows: 10, cols: 12, colors: 7 },
+      { rows: 11, cols: 12, colors: 8 },
+      { rows: 11, cols: 13, colors: 8 },
+      { rows: 12, cols: 13, colors: 9 },
+    ];
+    
+    function resize() {
+      const maxWidth = Math.min(window.innerWidth - 32, 420);
+      const maxHeight = Math.min(window.innerHeight - 180, 600);
+      const aspectRatio = maxWidth / maxHeight;
+      
+      if (aspectRatio > 0.7) {
+        height = maxHeight;
+        width = height * 0.7;
+      } else {
+        width = maxWidth;
+        height = maxWidth / 0.7;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      bubbleRadius = Math.min(width / 24, 18);
+      bubbleSpacing = bubbleRadius * 2;
+      gridCols = Math.floor(width / bubbleSpacing) - 1;
+      gridRows = 12;
+      cannonX = width / 2;
+      cannonY = height - bubbleRadius - 20;
+    }
+    
+    function initLevel() {
+      grid = [];
+      bullets = [];
+      explosions = [];
+      shots = 0;
+      
+      const config = levelConfigs[Math.min(level - 1, levelConfigs.length - 1)];
+      gridRows = config.rows;
+      
+      const offsetX = (width - config.cols * bubbleSpacing) / 2;
+      
+      for (let row = 0; row < gridRows; row++) {
+        grid[row] = [];
+        const colsInRow = row % 2 === 0 ? config.cols : config.cols - 1;
+        const rowOffset = row % 2 === 0 ? 0 : bubbleRadius;
+        
+        for (let col = 0; col < colsInRow; col++) {
+          if (row < config.rows - 1 || Math.random() > 0.3) {
+            grid[row][col] = {
+              x: offsetX + rowOffset + col * bubbleSpacing,
+              y: bubbleRadius + row * (bubbleSpacing * 0.866),
+              color: Math.floor(Math.random() * config.colors),
+              active: true
+            };
+          } else {
+            grid[row][col] = null;
+          }
+        }
+      }
+      
+      shooterBubble = { x: cannonX, y: cannonY, color: Math.floor(Math.random() * config.colors), vx: 0, vy: 0 };
+      nextBubble = { x: cannonX - 60, y: cannonY, color: Math.floor(Math.random() * config.colors) };
+      
+      shotsEl.textContent = shots;
+      levelEl.textContent = level;
+    }
+    
+    function snapToGrid(bullet) {
+      const offsetX = (width - gridCols * bubbleSpacing) / 2;
+      const rowY = bullet.y;
+      const colX = bullet.x;
+      
+      const gridY = Math.round((rowY - bubbleRadius) / (bubbleSpacing * 0.866));
+      const isOddRow = gridY % 2 !== 0;
+      const colsInRow = isOddRow ? gridCols - 1 : gridCols;
+      const rowOffset = isOddRow ? bubbleRadius : 0;
+      
+      const gridX = Math.round((colX - offsetX - rowOffset) / bubbleSpacing);
+      
+      const finalRow = Math.max(0, Math.min(gridRows - 1, gridY));
+      const finalCol = Math.max(0, Math.min(colsInRow - 1, gridX));
+      
+      if (!grid[finalRow]) grid[finalRow] = [];
+      grid[finalRow][finalCol] = {
+        x: offsetX + rowOffset + finalCol * bubbleSpacing,
+        y: bubbleRadius + finalRow * (bubbleSpacing * 0.866),
+        color: bullet.color,
+        active: true
+      };
+      
+      return { row: finalRow, col: finalCol };
+    }
+    
+    function findMatches(row, col, color, visited = new Set()) {
+      const key = `${row},${col}`;
+      if (visited.has(key)) return [];
+      
+      const gridRow = grid[row];
+      if (!gridRow || !gridRow[col] || gridRow[col].color !== color) return [];
+      
+      visited.add(key);
+      const matches = [{ row, col }];
+      
+      const neighbors = [
+        { row: row - 1, col: col },
+        { row: row + 1, col: col },
+        { row: row, col: col - 1 },
+        { row: row, col: col + 1 },
+        { row: row - 1, col: row % 2 === 0 ? col - 1 : col },
+        { row: row + 1, col: row % 2 === 0 ? col - 1 : col },
+      ];
+      
+      for (const n of neighbors) {
+        if (n.row >= 0 && n.row < gridRows) {
+          const colsInRow = n.row % 2 === 0 ? gridCols : gridCols - 1;
+          if (n.col >= 0 && n.col < colsInRow) {
+            matches.push(...findMatches(n.row, n.col, color, visited));
+          }
+        }
+      }
+      
+      return matches;
+    }
+    
+    function findFloating() {
+      const visited = new Set();
+      const connected = [];
+      
+      for (let col = 0; col < (0 % 2 === 0 ? gridCols : gridCols - 1); col++) {
+        if (grid[0] && grid[0][col]) {
+          const key = `0,${col}`;
+          if (!visited.has(key)) {
+            const matches = findMatches(0, col, grid[0][col].color, visited);
+            connected.push(...matches);
+          }
+        }
+      }
+      
+      const floating = [];
+      for (let row = 0; row < gridRows; row++) {
+        for (let col = 0; col < gridCols; col++) {
+          if (grid[row] && grid[row][col]) {
+            const key = `${row},${col}`;
+            if (!visited.has(key)) {
+              floating.push({ row, col });
+            }
+          }
+        }
+      }
+      
+      return floating;
+    }
+    
+    function checkCollisions() {
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const bullet = bullets[i];
+        
+        if (bullet.y - bubbleRadius < 0) {
+          const pos = snapToGrid(bullet);
+          bullets.splice(i, 1);
+          
+          const matches = findMatches(pos.row, pos.col, bullet.color);
+          if (matches.length >= 3) {
+            score += matches.length * 10;
+            matches.forEach(m => {
+              createExplosion(grid[m.row][m.col].x, grid[m.row][m.col].y, grid[m.row][m.col].color);
+              grid[m.row][m.col] = null;
+            });
+          }
+          
+          const floating = findFloating();
+          floating.forEach(f => {
+            if (grid[f.row] && grid[f.row][f.col]) {
+              createExplosion(grid[f.row][f.col].x, grid[f.row][f.col].y, grid[f.row][f.col].color);
+              grid[f.row][f.col] = null;
+              score += 20;
+            }
+          });
+          
+          scoreEl.textContent = score;
+          
+          if (isLevelComplete()) {
+            showLevelComplete();
+          } else if (isGameOver()) {
+            showGameOver();
+          } else {
+            loadNextBubble();
+          }
+          return;
+        }
+        
+        for (let row = 0; row < gridRows; row++) {
+          for (let col = 0; col < gridCols; col++) {
+            if (grid[row] && grid[row][col]) {
+              const bubble = grid[row][col];
+              const dx = bullet.x - bubble.x;
+              const dy = bullet.y - bubble.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              
+              if (dist < bubbleRadius * 2) {
+                bullets.splice(i, 1);
+                const pos = snapToGrid(bullet);
+                
+                const matches = findMatches(pos.row, pos.col, bullet.color);
+                if (matches.length >= 3) {
+                  score += matches.length * 10;
+                  matches.forEach(m => {
+                    createExplosion(grid[m.row][m.col].x, grid[m.row][m.col].y, grid[m.row][m.col].color);
+                    grid[m.row][m.col] = null;
+                  });
+                }
+                
+                const floating = findFloating();
+                floating.forEach(f => {
+                  if (grid[f.row] && grid[f.row][f.col]) {
+                    createExplosion(grid[f.row][f.col].x, grid[f.row][f.col].y, grid[f.row][f.col].color);
+                    grid[f.row][f.col] = null;
+                    score += 20;
+                  }
+                });
+                
+                scoreEl.textContent = score;
+                
+                if (isLevelComplete()) {
+                  showLevelComplete();
+                } else if (isGameOver()) {
+                  showGameOver();
+                } else {
+                  loadNextBubble();
+                }
+                return;
+              }
+            }
+          }
+        }
+        
+        if (bullet.x < bubbleRadius || bullet.x > width - bubbleRadius) {
+          bullet.vx *= -1;
+          bullet.x = Math.max(bubbleRadius, Math.min(width - bubbleRadius, bullet.x));
+        }
+      }
+    }
+    
+    function createExplosion(x, y, color) {
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8;
+        explosions.push({
+          x, y,
+          vx: Math.cos(angle) * (2 + Math.random() * 2),
+          vy: Math.sin(angle) * (2 + Math.random() * 2),
+          color,
+          life: 1
+        });
+      }
+    }
+    
+    function update() {
+      if (!gameRunning) return;
+      
+      bullets.forEach(b => {
+        b.x += b.vx;
+        b.y += b.vy;
+      });
+      
+      explosions.forEach((e, i) => {
+        e.x += e.vx;
+        e.y += e.vy;
+        e.vy += 0.1;
+        e.life -= 0.03;
+        if (e.life <= 0) explosions.splice(i, 1);
+      });
+      
+      checkCollisions();
+    }
+    
+    function draw() {
+      ctx.fillStyle = '#0a0a1a';
+      ctx.fillRect(0, 0, width, height);
+      
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, 'rgba(0,255,255,0.05)');
+      gradient.addColorStop(1, 'rgba(255,0,255,0.05)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      
+      for (let row = 0; row < gridRows; row++) {
+        if (!grid[row]) continue;
+        for (let col = 0; col < gridCols; col++) {
+          const bubble = grid[row][col];
+          if (bubble && bubble.active) {
+            drawBubble(bubble.x, bubble.y, bubble.color);
+          }
+        }
+      }
+      
+      bullets.forEach(b => {
+        drawBubble(b.x, b.y, b.color);
+      });
+      
+      explosions.forEach(e => {
+        ctx.globalAlpha = e.life;
+        ctx.fillStyle = colors[e.color];
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      
+      if (shooterBubble) {
+        drawBubble(shooterBubble.x, shooterBubble.y, shooterBubble.color);
+      }
+      
+      if (nextBubble) {
+        ctx.globalAlpha = 0.6;
+        drawBubble(nextBubble.x, nextBubble.y, nextBubble.color);
+        ctx.globalAlpha = 1;
+      }
+      
+      drawCannon();
+    }
+    
+    function drawBubble(x, y, colorIndex) {
+      const color = colors[colorIndex % colors.length];
+      const glow = glowColors[colorIndex % glowColors.length];
+      
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 15;
+      
+      const gradient = ctx.createRadialGradient(x - 4, y - 4, 0, x, y, bubbleRadius);
+      gradient.addColorStop(0, '#ffffff');
+      gradient.addColorStop(0.3, color);
+      gradient.addColorStop(1, shadeColor(color, -30));
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, bubbleRadius - 1, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
+    }
+    
+    function drawCannon() {
+      ctx.save();
+      ctx.translate(cannonX, cannonY);
+      
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 30, Math.PI * 0.1, Math.PI * 0.9);
+      ctx.stroke();
+      
+      ctx.rotate(aimAngle + Math.PI / 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(-4, -45, 8, 30);
+      
+      ctx.restore();
+    }
+    
+    function shadeColor(color, percent) {
+      const num = parseInt(color.replace('#', ''), 16);
+      const amt = Math.round(2.55 * percent);
+      const R = (num >> 16) + amt;
+      const G = (num >> 8 & 0x00FF) + amt;
+      const B = (num & 0x0000FF) + amt;
+      return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+    }
+    
+    function shoot() {
+      if (!gameRunning || !shooterBubble || bullets.length > 0) return;
+      if (Date.now() - lastShotTime < 500) return;
+      lastShotTime = Date.now();
+      
+      const speed = 12;
+      shooterBubble.vx = Math.cos(aimAngle) * speed;
+      shooterBubble.vy = Math.sin(aimAngle) * speed;
+      
+      bullets.push(shooterBubble);
+      shooterBubble = null;
+      
+      shots++;
+      shotsEl.textContent = shots;
+    }
+    
+    function loadNextBubble() {
+      const config = levelConfigs[Math.min(level - 1, levelConfigs.length - 1)];
+      shooterBubble = {
+        x: cannonX,
+        y: cannonY,
+        color: nextBubble ? nextBubble.color : Math.floor(Math.random() * config.colors),
+        vx: 0, vy: 0
+      };
+      nextBubble = {
+        x: cannonX - 60,
+        y: cannonY,
+        color: Math.floor(Math.random() * config.colors)
+      };
+    }
+    
+    function isLevelComplete() {
+      for (let row = 0; row < gridRows; row++) {
+        if (grid[row]) {
+          for (let col = 0; col < gridCols; col++) {
+            if (grid[row][col]) return false;
+          }
+        }
+      }
+      return true;
+    }
+    
+    function isGameOver() {
+      if (!grid[gridRows - 1]) return false;
+      for (let col = 0; col < gridCols; col++) {
+        if (grid[gridRows - 1][col]) return true;
+      }
+      return false;
+    }
+    
+    function showLevelComplete() {
+      gameRunning = false;
+      score += level * 100;
+      scoreEl.textContent = score;
+      
+      if (level >= levelConfigs.length) {
+        winScoreEl.textContent = score;
+        winScreen.classList.remove('hidden');
+      } else {
+        level++;
+        levelTitleEl.textContent = 'LEVEL ' + level;
+        levelScreen.classList.remove('hidden');
+      }
+    }
+    
+    function showGameOver() {
+      gameRunning = false;
+      finalScoreEl.textContent = score;
+      gameoverScreen.classList.remove('hidden');
+    }
+    
+    function startGame() {
+      score = 0;
+      level = 1;
+      scoreEl.textContent = score;
+      levelEl.textContent = level;
+      
+      initLevel();
+      gameRunning = true;
+      
+      menuScreen.classList.add('hidden');
+      gameoverScreen.classList.add('hidden');
+      winScreen.classList.add('hidden');
+      
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function startLevel() {
+      initLevel();
+      gameRunning = true;
+      levelScreen.classList.add('hidden');
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function gameLoop() {
+      if (!gameRunning) return;
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function handleAim(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = (clientX - rect.left) * (width / rect.width);
+      const y = (clientY - rect.top) * (height / rect.height);
+      
+      const dx = x - cannonX;
+      const dy = y - cannonY;
+      aimAngle = Math.atan2(dy, dx);
+      aimAngle = Math.max(-Math.PI + 0.2, Math.min(-0.2, aimAngle));
+    }
+    
+    document.getElementById('start-btn').onclick = startGame;
+    document.getElementById('restart-btn').onclick = startGame;
+    document.getElementById('play-again-btn').onclick = startGame;
+    document.getElementById('continue-btn').onclick = startLevel;
+    
+    canvas.addEventListener('mousemove', e => handleAim(e.clientX, e.clientY));
+    canvas.addEventListener('click', shoot);
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (e.touches.length > 0) {
+        handleAim(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    });
+    canvas.addEventListener('touchend', e => {
+      e.preventDefault();
+      shoot();
+    });
+    
+    window.addEventListener('resize', resize);
+    resize();
+    draw();
+    
+    window.parent.postMessage({ type: 'gameReady', gameSlug: 'bubble-shooter' }, '*');
+  </script>
+</body>
+</html>

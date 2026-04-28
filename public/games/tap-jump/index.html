@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tap Jump</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0B0C10;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #game-canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    
+    #ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+    }
+    
+    .stat-box {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px 16px;
+      text-align: center;
+    }
+    
+    .stat-label {
+      font-size: 10px;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: white;
+    }
+    
+    .score-value { color: #06B6D4; }
+    .time-value { color: #F59E0B; }
+    .high-value { color: #FBBF24; }
+    
+    #menu-screen, #gameover-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(88, 28, 135, 0.9), rgba(6, 182, 212, 0.9));
+      z-index: 10;
+    }
+    
+    #gameover-screen {
+      display: none;
+    }
+    
+    .screen-title {
+      font-size: 48px;
+      font-weight: 800;
+      color: white;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      margin-bottom: 8px;
+    }
+    
+    .screen-subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 40px;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 32px;
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(135deg, #8B5CF6, #06B6D4);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+      pointer-events: auto;
+    }
+    
+    .btn:active {
+      transform: scale(0.95);
+    }
+    
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: none;
+      margin-top: 12px;
+    }
+    
+    .btn svg {
+      width: 24px;
+      height: 24px;
+    }
+    
+    .final-score {
+      font-size: 72px;
+      font-weight: 800;
+      color: #06B6D4;
+      text-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
+    }
+    
+    .final-label {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 24px;
+    }
+    
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+    
+    <div id="ui-overlay">
+      <div class="stat-box">
+        <div class="stat-label">Score</div>
+        <div class="stat-value score-value" id="score-display">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Time</div>
+        <div class="stat-value time-value" id="time-display">60</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Best</div>
+        <div class="stat-value high-value" id="high-display">0</div>
+      </div>
+    </div>
+    
+    <div id="menu-screen">
+      <div class="screen-title">Tap Jump</div>
+      <div class="screen-subtitle">Jump and collect stars!</div>
+      <button class="btn" id="start-btn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        Play Now
+      </button>
+    </div>
+    
+    <div id="gameover-screen">
+      <div class="screen-title">Game Over!</div>
+      <div class="final-score" id="final-score">0</div>
+      <div class="final-label">Final Score</div>
+      <div class="btn-group">
+        <button class="btn" id="restart-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Play Again
+        </button>
+        <button class="btn btn-secondary" id="menu-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Menu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('game-container');
+    
+    const scoreDisplay = document.getElementById('score-display');
+    const timeDisplay = document.getElementById('time-display');
+    const highDisplay = document.getElementById('high-display');
+    const menuScreen = document.getElementById('menu-screen');
+    const gameoverScreen = document.getElementById('gameover-screen');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const menuBtn = document.getElementById('menu-btn');
+    
+    let width, height;
+    let gameState = 'menu';
+    let score = 0;
+    let timeLeft = 60;
+    let highScore = parseInt(localStorage.getItem('tapJumpHighScore') || '0');
+    let lastTime = 0;
+    let timerInterval;
+    
+    const player = {
+      x: 0,
+      y: 0,
+      vy: 0,
+      size: 40,
+      grounded: true,
+      jumpPower: -15,
+      gravity: 0.6
+    };
+    
+    const platforms = [];
+    const stars = [];
+    const particles = [];
+    const numPlatforms = 7;
+    const numStars = 5;
+    
+    function resize() {
+      const rect = container.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      canvas.width = width;
+      canvas.height = height;
+    }
+    
+    function initGame() {
+      score = 0;
+      timeLeft = 60;
+      scoreDisplay.textContent = '0';
+      timeDisplay.textContent = '60';
+      highDisplay.textContent = highScore;
+      
+      player.x = width / 2;
+      player.y = height - 100;
+      player.vy = 0;
+      player.grounded = true;
+      
+      platforms.length = 0;
+      stars.length = 0;
+      particles.length = 0;
+      
+      for (let i = 0; i < numPlatforms; i++) {
+        platforms.push({
+          x: Math.random() * (width - 80) + 40,
+          y: height - 150 - i * (height / numPlatforms),
+          width: 80 + Math.random() * 60,
+          height: 16,
+          color: `hsl(${200 + Math.random() * 60}, 70%, 60%)`
+        });
+      }
+      
+      for (let i = 0; i < numStars; i++) {
+        stars.push({
+          x: Math.random() * (width - 40) + 20,
+          y: Math.random() * (height - 200) + 100,
+          size: 20,
+          rotation: 0,
+          active: true
+        });
+      }
+    }
+    
+    function jump() {
+      if (gameState === 'playing' && player.grounded) {
+        player.vy = player.jumpPower;
+        player.grounded = false;
+        
+        for (let i = 0; i < 8; i++) {
+          particles.push({
+            x: player.x,
+            y: player.y + player.size,
+            vx: (Math.random() - 0.5) * 6,
+            vy: Math.random() * 3,
+            life: 1,
+            color: '#06B6D4'
+          });
+        }
+      }
+    }
+    
+    function createStarParticles(x, y) {
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * 4,
+          vy: Math.sin(angle) * 4,
+          life: 1,
+          color: '#FBBF24'
+        });
+      }
+    }
+    
+    function update(dt) {
+      player.vy += player.gravity;
+      player.y += player.vy;
+      
+      for (const platform of platforms) {
+        if (player.vy > 0 &&
+            player.x + player.size / 2 > platform.x &&
+            player.x - player.size / 2 < platform.x + platform.width &&
+            player.y + player.size >= platform.y &&
+            player.y + player.size <= platform.y + platform.height + player.vy) {
+          player.y = platform.y - player.size;
+          player.vy = 0;
+          player.grounded = true;
+        }
+      }
+      
+      if (player.y > height + 50) {
+        endGame();
+        return;
+      }
+      
+      if (player.y < height / 2) {
+        const shift = height / 2 - player.y;
+        player.y = height / 2;
+        
+        for (const platform of platforms) {
+          platform.y += shift;
+        }
+        for (const star of stars) {
+          star.y += shift;
+        }
+        for (const particle of particles) {
+          particle.y += shift;
+        }
+        
+        score += 1;
+        scoreDisplay.textContent = score;
+      }
+      
+      for (const star of stars) {
+        if (star.active) {
+          star.rotation += 0.05;
+          const dx = player.x - star.x;
+          const dy = player.y - star.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist < player.size + star.size) {
+            star.active = false;
+            score += 10;
+            scoreDisplay.textContent = score;
+            createStarParticles(star.x, star.y);
+          }
+        }
+      }
+      
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.02;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+    }
+    
+    function drawStar(x, y, size, rotation) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+        const px = Math.cos(angle) * size;
+        const py = Math.sin(angle) * size;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fillStyle = '#FBBF24';
+      ctx.shadowColor = '#FBBF24';
+      ctx.shadowBlur = 15;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+    
+    function draw() {
+      ctx.fillStyle = '#0B0C10';
+      ctx.fillRect(0, 0, width, height);
+      
+      const gradient = ctx.createRadialGradient(width / 2, 0, 0, width / 2, 0, height);
+      gradient.addColorStop(0, 'rgba(88, 28, 135, 0.3)');
+      gradient.addColorStop(1, 'rgba(6, 182, 212, 0.1)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      
+      for (const platform of platforms) {
+        ctx.fillStyle = platform.color;
+        ctx.shadowColor = platform.color;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.roundRect(platform.x, platform.y, platform.width, platform.height, 8);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      
+      for (const star of stars) {
+        if (star.active) {
+          drawStar(star.x, star.y, star.size, star.rotation);
+        }
+      }
+      
+      for (const particle of particles) {
+        ctx.globalAlpha = particle.life;
+        ctx.fillStyle = particle.color;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      
+      ctx.fillStyle = '#06B6D4';
+      ctx.shadowColor = '#06B6D4';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(player.x - 10, player.y - 5, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    function gameLoop(timestamp) {
+      if (lastTime === 0) lastTime = timestamp;
+      const dt = timestamp - lastTime;
+      lastTime = timestamp;
+      
+      if (gameState === 'playing') {
+        update(dt);
+      }
+      
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function startGame() {
+      initGame();
+      gameState = 'playing';
+      menuScreen.style.display = 'none';
+      gameoverScreen.style.display = 'none';
+      
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (gameState === 'playing') {
+          timeLeft--;
+          timeDisplay.textContent = timeLeft;
+          if (timeLeft <= 0) {
+            endGame();
+          }
+        }
+      }, 1000);
+    }
+    
+    function endGame() {
+      gameState = 'gameover';
+      clearInterval(timerInterval);
+      
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('tapJumpHighScore', highScore.toString());
+        highDisplay.textContent = highScore;
+      }
+      
+      finalScoreDisplay.textContent = score;
+      gameoverScreen.style.display = 'flex';
+      
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'gameScore', score: score, gameSlug: 'tap-jump' }, '*');
+      }
+    }
+    
+    function showMenu() {
+      gameState = 'menu';
+      clearInterval(timerInterval);
+      menuScreen.style.display = 'flex';
+      gameoverScreen.style.display = 'none';
+      score = 0;
+      scoreDisplay.textContent = '0';
+      timeDisplay.textContent = '60';
+      highDisplay.textContent = highScore;
+    }
+    
+    function handleInput(e) {
+      e.preventDefault();
+      jump();
+    }
+    
+    canvas.addEventListener('click', handleInput);
+    canvas.addEventListener('touchstart', handleInput, { passive: false });
+    
+    startBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startGame();
+    });
+    
+    restartBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startGame();
+    });
+    
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showMenu();
+    });
+    
+    window.addEventListener('resize', resize);
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        jump();
+      }
+    });
+    
+    resize();
+    showMenu();
+    requestAnimationFrame(gameLoop);
+    
+    window.parent.postMessage({ type: 'gameReady', gameSlug: 'tap-jump' }, '*');
+  </script>
+</body>
+</html>

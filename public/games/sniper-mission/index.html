@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sniper Mission - PlayZone</title>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+        
+        body {
+            background: linear-gradient(135deg, #0a1a0a 0%, #0a1a1a 50%, #0a0a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Russo One', sans-serif;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 16/9;
+            background: linear-gradient(180deg, #051005 0%, #0a0f0a 100%);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 0 60px rgba(0, 255, 100, 0.15), 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        #gameCanvas { width: 100%; height: 100%; display: block; }
+        
+        .scope-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            display: none;
+        }
+        
+        .scope-overlay.active { display: block; }
+        
+        .scope-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 3px solid rgba(0, 255, 100, 0.8);
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(0, 255, 100, 0.5), inset 0 0 30px rgba(0, 255, 100, 0.2);
+        }
+        
+        .scope-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+        }
+        
+        .scope-crosshair::before, .scope-crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(0, 255, 100, 0.6);
+        }
+        
+        .scope-crosshair::before {
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            transform: translateY(-50%);
+        }
+        
+        .scope-crosshair::after {
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            transform: translateX(-50%);
+        }
+        
+        .scope-markers {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px;
+            height: 280px;
+        }
+        
+        .scope-marker {
+            position: absolute;
+            background: rgba(0, 255, 100, 0.4);
+        }
+        
+        .ui-bar {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+        }
+        
+        .stat-box {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 100, 0.2);
+        }
+        
+        .stat-label { font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; }
+        .stat-value { font-size: 20px; color: #00ff88; }
+        
+        .mission-panel {
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 200, 0, 0.3);
+            z-index: 12;
+        }
+        
+        .mission-title { font-size: 12px; color: #ffd700; margin-bottom: 5px; }
+        .mission-target { font-size: 14px; color: #fff; }
+        
+        .zoom-indicator {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 16px;
+            color: #00ff88;
+            z-index: 12;
+        }
+        
+        #startScreen, #gameOverScreen, #levelCompleteScreen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(5, 15, 5, 0.95);
+            z-index: 20;
+        }
+        
+        .title {
+            font-size: clamp(28px, 5vw, 52px);
+            font-weight: 900;
+            color: #00ff88;
+            text-shadow: 0 0 30px #00ff88, 0 0 60px #00ff00;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: clamp(12px, 2vw, 16px);
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 25px;
+            letter-spacing: 2px;
+        }
+        
+        .btn {
+            padding: 16px 45px;
+            font-size: clamp(14px, 2vw, 20px);
+            font-family: 'Russo One', sans-serif;
+            font-weight: 700;
+            color: #000;
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 255, 136, 0.6);
+        }
+        
+        .final-score {
+            font-size: clamp(20px, 4vw, 36px);
+            color: #ffd700;
+            margin: 15px 0;
+        }
+        
+        .high-score {
+            color: #ff6b6b;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 15;
+        }
+        
+        .ctrl-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(0, 255, 100, 0.1);
+            border: 2px solid rgba(0, 255, 100, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.15s;
+            backdrop-filter: blur(10px);
+        }
+        
+        .ctrl-btn:active, .ctrl-btn.active {
+            background: rgba(0, 255, 100, 0.4);
+            border-color: #00ff88;
+            transform: scale(0.9);
+        }
+        
+        .ctrl-btn.fire {
+            background: rgba(255, 0, 0, 0.3);
+            border-color: rgba(255, 0, 0, 0.5);
+        }
+        
+        .ctrl-btn.fire:active, .ctrl-btn.fire.active {
+            background: rgba(255, 0, 0, 0.6);
+            border-color: #ff0000;
+        }
+        
+        .instructions {
+            color: rgba(255,255,255,0.5);
+            font-size: 11px;
+            margin-top: 15px;
+        }
+        
+        .muzzle-flash {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #ffff00, #ff8800, transparent);
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 15;
+        }
+        
+        .muzzle-flash.active {
+            animation: flash 0.1s;
+        }
+        
+        @keyframes flash {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(2); }
+        }
+        
+        .hit-marker {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #ff0000;
+            transform: translate(-50%, -50%) rotate(45deg);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 16;
+        }
+        
+        .hit-marker.show {
+            animation: hitMarker 0.5s;
+        }
+        
+        @keyframes hitMarker {
+            0% { opacity: 1; transform: translate(-50%, -50%) rotate(45deg) scale(0.5); }
+            50% { opacity: 1; transform: translate(-50%, -50%) rotate(45deg) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -50%) rotate(45deg) scale(1); }
+        }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="scope-overlay" id="scopeOverlay">
+            <div class="scope-circle" id="scopeCircle"></div>
+            <div class="scope-crosshair"></div>
+            <div class="scope-markers" id="scopeMarkers"></div>
+        </div>
+        
+        <div class="muzzle-flash" id="muzzleFlash"></div>
+        <div class="hit-marker" id="hitMarker"></div>
+        
+        <div class="ui-bar">
+            <div class="stat-box">
+                <div class="stat-label">Mission</div>
+                <div class="stat-value" id="levelDisplay">LEVEL 1</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Score</div>
+                <div class="stat-value" id="scoreDisplay">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Targets</div>
+                <div class="stat-value" id="targetsDisplay">0/3</div>
+            </div>
+        </div>
+        
+        <div class="mission-panel">
+            <div class="mission-title">CURRENT MISSION</div>
+            <div class="mission-target" id="missionText">Eliminate 3 targets</div>
+        </div>
+        
+        <div class="zoom-indicator" id="zoomIndicator">ZOOM: 1.0x</div>
+        
+        <div id="controls" class="hidden">
+            <button class="ctrl-btn" id="upBtn">▲</button>
+            <button class="ctrl-btn" id="downBtn">▼</button>
+            <button class="ctrl-btn" id="leftBtn">◀</button>
+            <button class="ctrl-btn" id="rightBtn">▶</button>
+            <button class="ctrl-btn fire" id="fireBtn">🎯</button>
+        </div>
+        
+        <div id="startScreen">
+            <div class="title">SNIPER MISSION</div>
+            <div class="subtitle">ELIMINATE THE TARGETS</div>
+            <button class="btn" id="startBtn">START MISSION</button>
+            <div class="instructions">ARROW KEYS TO AIM • SPACE TO SHOOT</div>
+        </div>
+        
+        <div id="levelCompleteScreen" class="hidden">
+            <div class="title" style="font-size: clamp(24px, 4vw, 40px); color: #ffd700;">MISSION COMPLETE!</div>
+            <div class="final-score">SCORE: <span id="levelScore">0</span></div>
+            <button class="btn" id="nextLevelBtn">NEXT MISSION</button>
+        </div>
+        
+        <div id="gameOverScreen" class="hidden">
+            <div class="title" style="font-size: clamp(24px, 4vw, 40px); color: #ff4444;">MISSION FAILED</div>
+            <div class="final-score">SCORE: <span id="finalScore">0</span></div>
+            <div class="high-score">HIGH SCORE: <span id="highScore">0</span></div>
+            <button class="btn" id="restartBtn">RETRY</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            const container = document.getElementById('gameContainer');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Audio
+        let audioCtx = null;
+        
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            switch(type) {
+                case 'shoot':
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                    break;
+                case 'hit':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.1);
+                    break;
+                case 'zoom':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.15);
+                    break;
+            }
+        }
+        
+        // Game State
+        let gameRunning = false;
+        let score = 0;
+        let level = 1;
+        let targetsHit = 0;
+        let targetsInLevel = 3;
+        let zoomLevel = 1;
+        let frameCount = 0;
+        let aimingAt = null;
+        
+        // Crosshair
+        const crosshair = { x: 0, y: 0 };
+        
+        // Targets
+        let targets = [];
+        
+        function createTarget(levelNum) {
+            const margin = 100;
+            return {
+                x: margin + Math.random() * (canvas.width - margin * 2),
+                y: 80 + Math.random() * (canvas.height - 200),
+                radius: 25 - levelNum * 2,
+                alive: true,
+                sway: Math.random() * Math.PI * 2,
+                swayAmount: 10 + levelNum * 2,
+                points: 500 + levelNum * 200
+            };
+        }
+        
+        function initLevel() {
+            targets = [];
+            targetsInLevel = 3 + level;
+            targetsHit = 0;
+            
+            for (let i = 0; i < targetsInLevel; i++) {
+                targets.push(createTarget(level));
+            }
+            
+            document.getElementById('levelDisplay').textContent = `LEVEL ${level}`;
+            document.getElementById('targetsDisplay').textContent = `${targetsHit}/${targetsInLevel}`;
+            document.getElementById('missionText').textContent = `Eliminate ${targetsInLevel} targets`;
+        }
+        
+        // Scope
+        function updateScope() {
+            const overlay = document.getElementById('scopeOverlay');
+            const circle = document.getElementById('scopeCircle');
+            const size = 300 / zoomLevel;
+            
+            circle.style.width = size + 'px';
+            circle.style.height = size + 'px';
+            
+            overlay.classList.toggle('active', zoomLevel > 1);
+            
+            document.getElementById('zoomIndicator').textContent = `ZOOM: ${zoomLevel.toFixed(1)}x`;
+        }
+        
+        function drawBackground() {
+            // Night scene
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grad.addColorStop(0, '#050510');
+            grad.addColorStop(0.5, '#0a0a15');
+            grad.addColorStop(1, '#050510');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // City silhouette
+            ctx.fillStyle = '#0a0a12';
+            for (let i = 0; i < 15; i++) {
+                const x = i * 80 - 50;
+                const h = 80 + Math.random() * 120;
+                const w = 40 + Math.random() * 40;
+                ctx.fillRect(x, canvas.height - h - 60, w, h);
+                
+                // Windows
+                ctx.fillStyle = 'rgba(255, 255, 100, 0.3)';
+                for (let wy = 10; wy < h - 20; wy += 20) {
+                    for (let wx = 8; wx < w - 8; wx += 15) {
+                        if (Math.random() > 0.4) {
+                            ctx.fillRect(x + wx, canvas.height - h - 60 + wy, 8, 12);
+                        }
+                    }
+                }
+                ctx.fillStyle = '#0a0a12';
+            }
+            
+            // Ground
+            ctx.fillStyle = '#080808';
+            ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
+            
+            // Moon
+            ctx.fillStyle = '#ccccaa';
+            ctx.shadowColor = '#ccccaa';
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.arc(canvas.width - 80, 60, 30, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+        
+        function drawCrosshair() {
+            ctx.strokeStyle = `rgba(0, 255, 100, ${0.3 + zoomLevel * 0.2})`;
+            ctx.lineWidth = 2;
+            
+            // Crosshair
+            ctx.beginPath();
+            ctx.moveTo(crosshair.x - 30, crosshair.y);
+            ctx.lineTo(crosshair.x - 10, crosshair.y);
+            ctx.moveTo(crosshair.x + 10, crosshair.y);
+            ctx.lineTo(crosshair.x + 30, crosshair.y);
+            ctx.moveTo(crosshair.x, crosshair.y - 30);
+            ctx.lineTo(crosshair.x, crosshair.y - 10);
+            ctx.moveTo(crosshair.x, crosshair.y + 10);
+            ctx.lineTo(crosshair.x, crosshair.y + 30);
+            ctx.stroke();
+            
+            // Center dot
+            ctx.fillStyle = '#00ff88';
+            ctx.beginPath();
+            ctx.arc(crosshair.x, crosshair.y, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Range markers
+            if (zoomLevel > 1) {
+                ctx.font = '10px Russo One';
+                ctx.fillStyle = 'rgba(0, 255, 100, 0.7)';
+                for (let r = 50; r <= 150; r += 50) {
+                    ctx.beginPath();
+                    ctx.arc(crosshair.x, crosshair.y, r, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        function updateGame() {
+            if (!gameRunning) return;
+            
+            frameCount++;
+            
+            // Move targets
+            targets.forEach(t => {
+                if (t.alive) {
+                    t.sway += 0.02;
+                    t.x += Math.sin(t.sway) * 0.3;
+                    t.y += Math.cos(t.sway * 0.7) * 0.2;
+                }
+            });
+            
+            // Check aim
+            aimingAt = null;
+            targets.forEach(t => {
+                if (t.alive) {
+                    const dx = crosshair.x - t.x;
+                    const dy = crosshair.y - t.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < t.radius) {
+                        aimingAt = t;
+                    }
+                }
+            });
+            
+            updateUI();
+            drawGame();
+            requestAnimationFrame(updateGame);
+        }
+        
+        function updateUI() {
+            document.getElementById('scoreDisplay').textContent = score;
+            document.getElementById('targetsDisplay').textContent = `${targetsHit}/${targetsInLevel}`;
+        }
+        
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawBackground();
+            
+            // Draw targets
+            targets.forEach(t => {
+                if (!t.alive) return;
+                
+                const isAiming = aimingAt === t;
+                const size = t.radius * (zoomLevel > 1.5 ? 1.2 : 1);
+                
+                // Target body
+                ctx.fillStyle = isAiming ? '#ff4444' : '#aa3333';
+                ctx.shadowColor = isAiming ? '#ff0000' : '#aa3333';
+                ctx.shadowBlur = isAiming ? 20 : 10;
+                
+                // Head
+                ctx.beginPath();
+                ctx.arc(t.x, t.y - size * 0.3, size * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Body
+                ctx.fillRect(t.x - size * 0.35, t.y, size * 0.7, size);
+                
+                // Crosshair when aiming
+                if (isAiming) {
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, size * 1.5, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                ctx.shadowBlur = 0;
+            });
+            
+            // Draw crosshair
+            drawCrosshair();
+        }
+        
+        function shoot() {
+            playSound('shoot', 0.4);
+            
+            // Muzzle flash
+            const flash = document.getElementById('muzzleFlash');
+            flash.style.left = (canvas.width - 25) + 'px';
+            flash.style.top = (canvas.height - 75) + 'px';
+            flash.classList.remove('active');
+            void flash.offsetWidth;
+            flash.classList.add('active');
+            
+            // Hit detection
+            if (aimingAt) {
+                aimingAt.alive = false;
+                targetsHit++;
+                score += aimingAt.points;
+                playSound('hit', 0.3);
+                
+                // Hit marker
+                const marker = document.getElementById('hitMarker');
+                marker.style.left = aimingAt.x + 'px';
+                marker.style.top = aimingAt.y + 'px';
+                marker.classList.remove('show');
+                void marker.offsetWidth;
+                marker.classList.add('show');
+                
+                // Screen shake
+                document.getElementById('gameContainer').style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
+                setTimeout(() => document.getElementById('gameContainer').style.transform = '', 50);
+                
+                // Check level complete
+                if (targetsHit >= targetsInLevel) {
+                    levelComplete();
+                }
+            }
+        }
+        
+        function levelComplete() {
+            gameRunning = false;
+            playSound('zoom', 0.3);
+            
+            document.getElementById('levelScore').textContent = score;
+            document.getElementById('levelCompleteScreen').classList.remove('hidden');
+            document.getElementById('controls').classList.add('hidden');
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            
+            const highScore = Math.max(score, parseInt(localStorage.getItem('sniperMissionHighScore') || '0'));
+            localStorage.setItem('sniperMissionHighScore', highScore.toString());
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('highScore').textContent = highScore;
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+            document.getElementById('controls').classList.add('hidden');
+        }
+        
+        function startGame() {
+            initAudio();
+            gameRunning = true;
+            score = 0;
+            level = 1;
+            zoomLevel = 1;
+            crosshair.x = canvas.width / 2;
+            crosshair.y = canvas.height / 2;
+            
+            initLevel();
+            
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('levelCompleteScreen').classList.add('hidden');
+            document.getElementById('controls').classList.remove('hidden');
+            
+            updateScope();
+            updateGame();
+        }
+        
+        function nextLevel() {
+            level++;
+            zoomLevel = 1;
+            initLevel();
+            
+            document.getElementById('levelCompleteScreen').classList.add('hidden');
+            document.getElementById('controls').classList.remove('hidden');
+            
+            updateScope();
+            gameRunning = true;
+            updateGame();
+        }
+        
+        // Controls
+        const speed = 5;
+        
+        function setupBtn(id, dir) {
+            const btn = document.getElementById(id);
+            let interval = null;
+            
+            const move = () => {
+                if (dir === 'up') crosshair.y = Math.max(50, crosshair.y - speed);
+                if (dir === 'down') crosshair.y = Math.min(canvas.height - 80, crosshair.y + speed);
+                if (dir === 'left') crosshair.x = Math.max(30, crosshair.x - speed);
+                if (dir === 'right') crosshair.x = Math.min(canvas.width - 30, crosshair.x + speed);
+            };
+            
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); interval = setInterval(move, 30); });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); clearInterval(interval); });
+            btn.addEventListener('mousedown', (e) => { e.preventDefault(); interval = setInterval(move, 30); });
+            btn.addEventListener('mouseup', (e) => { e.preventDefault(); clearInterval(interval); });
+            btn.addEventListener('mouseleave', () => clearInterval(interval));
+        }
+        
+        setupBtn('upBtn', 'up');
+        setupBtn('downBtn', 'down');
+        setupBtn('leftBtn', 'left');
+        setupBtn('rightBtn', 'right');
+        
+        document.getElementById('fireBtn').addEventListener('touchstart', (e) => { e.preventDefault(); if (gameRunning) shoot(); });
+        document.getElementById('fireBtn').addEventListener('mousedown', (e) => { e.preventDefault(); if (gameRunning) shoot(); });
+        
+        // Canvas tap to shoot
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameRunning) {
+                const rect = canvas.getBoundingClientRect();
+                crosshair.x = e.touches[0].clientX - rect.left;
+                crosshair.y = e.touches[0].clientY - rect.top;
+                shoot();
+            }
+        });
+        
+        canvas.addEventListener('mousedown', (e) => {
+            if (gameRunning) {
+                const rect = canvas.getBoundingClientRect();
+                crosshair.x = e.clientX - rect.left;
+                crosshair.y = e.clientY - rect.top;
+                shoot();
+            }
+        });
+        
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            
+            if (e.code === 'ArrowUp' || e.code === 'KeyW') crosshair.y = Math.max(50, crosshair.y - speed);
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') crosshair.y = Math.min(canvas.height - 80, crosshair.y + speed);
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') crosshair.x = Math.max(30, crosshair.x - speed);
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') crosshair.x = Math.min(canvas.width - 30, crosshair.x + speed);
+            if (e.code === 'Space' || e.code === 'KeyK' || e.code === 'Enter') shoot();
+            if (e.code === 'KeyZ' || e.code === 'KeyQ') {
+                zoomLevel = zoomLevel > 1 ? 1 : 2.5;
+                playSound('zoom', 0.2);
+                updateScope();
+            }
+        });
+        
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+        document.getElementById('nextLevelBtn').addEventListener('click', nextLevel);
+        
+        // Init
+        crosshair.x = canvas.width / 2;
+        crosshair.y = canvas.height / 2;
+        
+        // Generate scope markers
+        const markers = document.getElementById('scopeMarkers');
+        for (let i = 0; i < 8; i++) {
+            const m = document.createElement('div');
+            m.className = 'scope-marker';
+            m.style.width = '2px';
+            m.style.height = '10px';
+            m.style.left = (140 + (i % 4) * 30) + 'px';
+            m.style.top = (i < 4 ? 10 : 270) + 'px';
+            markers.appendChild(m);
+        }
+        
+        drawGame();
+    </script>
+</body>
+</html>

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stickman Runner - PlayZone</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', monospace;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 16/9;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.3), inset 0 0 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        .score-display {
+            color: #0ff;
+            font-size: 18px;
+            font-weight: 700;
+            text-shadow: 0 0 10px #0ff;
+        }
+        
+        .coin-display {
+            color: #ffd700;
+            font-size: 18px;
+            font-weight: 700;
+            text-shadow: 0 0 10px #ffd700;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .coin-icon {
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ffd700;
+        }
+        
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 20;
+        }
+        
+        .title {
+            font-size: clamp(24px, 5vw, 48px);
+            font-weight: 900;
+            color: #0ff;
+            text-shadow: 0 0 20px #0ff, 0 0 40px #0ff;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            font-size: clamp(12px, 2.5vw, 18px);
+            color: #fff;
+            margin-bottom: 30px;
+            opacity: 0.8;
+        }
+        
+        .final-score {
+            font-size: clamp(20px, 4vw, 36px);
+            color: #ffd700;
+            margin: 20px 0;
+            text-shadow: 0 0 15px #ffd700;
+        }
+        
+        .btn {
+            padding: 15px 40px;
+            font-size: clamp(14px, 2.5vw, 18px);
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #00d4ff, #0077ff);
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(0, 212, 255, 0.6);
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-restart {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 15;
+        }
+        
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(5px);
+        }
+        
+        .control-btn:active {
+            background: rgba(0, 255, 255, 0.3);
+            border-color: #0ff;
+            transform: scale(0.9);
+        }
+        
+        #soundToggle {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .high-score {
+            color: #ff6b6b;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .instructions {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        @media (max-width: 600px) {
+            .control-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <button id="soundToggle">🔊</button>
+        
+        <div id="ui">
+            <div class="score-display">SCORE: <span id="score">0</span></div>
+            <div class="coin-display">
+                <div class="coin-icon"></div>
+                <span id="coins">0</span>
+            </div>
+        </div>
+        
+        <div id="controls" class="hidden">
+            <button class="control-btn" id="jumpBtn">⬆</button>
+            <button class="control-btn" id="slideBtn">⬇</button>
+        </div>
+        
+        <div id="startScreen">
+            <div class="title">STICKMAN RUNNER</div>
+            <div class="subtitle">Run, Jump, Slide, Survive!</div>
+            <button class="btn" id="startBtn">PLAY NOW</button>
+            <div class="instructions">Tap Jump to jump • Tap Slide to slide</div>
+        </div>
+        
+        <div id="gameOverScreen" class="hidden">
+            <div class="title">GAME OVER</div>
+            <div class="final-score">SCORE: <span id="finalScore">0</span></div>
+            <div class="coin-display" style="margin-bottom: 10px;">
+                <div class="coin-icon"></div>
+                <span id="finalCoins">0</span>
+            </div>
+            <div class="high-score">HIGH SCORE: <span id="highScore">0</span></div>
+            <button class="btn btn-restart" id="restartBtn">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Responsive canvas
+        function resizeCanvas() {
+            const container = document.getElementById('gameContainer');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Game state
+        let gameRunning = false;
+        let score = 0;
+        let coins = 0;
+        let gameSpeed = 5;
+        let frameCount = 0;
+        let soundEnabled = true;
+        
+        // Audio context for sounds
+        let audioCtx = null;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            switch(type) {
+                case 'jump':
+                    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.1);
+                    break;
+                case 'coin':
+                    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(1000, audioCtx.currentTime + 0.05);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.1);
+                    break;
+                case 'death':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                    break;
+            }
+        }
+        
+        // Player (Stickman)
+        const player = {
+            x: 100,
+            y: 0,
+            width: 40,
+            height: 80,
+            velocityY: 0,
+            isJumping: false,
+            isSliding: false,
+            slideTimer: 0,
+            runFrame: 0,
+            groundY: 0,
+            
+            reset() {
+                this.y = this.groundY - this.height;
+                this.velocityY = 0;
+                this.isJumping = false;
+                this.isSliding = false;
+                this.slideTimer = 0;
+            },
+            
+            jump() {
+                if (!this.isJumping && !this.isSliding) {
+                    this.velocityY = -18;
+                    this.isJumping = true;
+                    playSound('jump');
+                }
+            },
+            
+            slide() {
+                if (!this.isJumping && !this.isSliding) {
+                    this.isSliding = true;
+                    this.slideTimer = 40;
+                    this.height = 40;
+                    this.y = this.groundY - 40;
+                }
+            },
+            
+            update() {
+                // Gravity
+                if (this.isJumping) {
+                    this.velocityY += 0.8;
+                    this.y += this.velocityY;
+                    
+                    if (this.y >= this.groundY - this.height) {
+                        this.y = this.groundY - this.height;
+                        this.isJumping = false;
+                        this.velocityY = 0;
+                    }
+                }
+                
+                // Slide
+                if (this.isSliding) {
+                    this.slideTimer--;
+                    if (this.slideTimer <= 0) {
+                        this.isSliding = false;
+                        this.height = 80;
+                        this.y = this.groundY - 80;
+                    }
+                }
+                
+                this.runFrame += 0.2;
+            },
+            
+            draw() {
+                const x = this.x;
+                const y = this.y;
+                
+                // Shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(x + this.width/2, this.groundY + 5, 20, 5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Stickman body
+                ctx.strokeStyle = '#0ff';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.shadowColor = '#0ff';
+                ctx.shadowBlur = 10;
+                
+                // Head
+                ctx.beginPath();
+                ctx.arc(x + this.width/2, y + 15, 12, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Body
+                ctx.beginPath();
+                ctx.moveTo(x + this.width/2, y + 27);
+                ctx.lineTo(x + this.width/2, y + 55);
+                ctx.stroke();
+                
+                // Legs
+                const legOffset = this.isSliding ? 0 : Math.sin(this.runFrame) * 10;
+                ctx.beginPath();
+                ctx.moveTo(x + this.width/2, y + 55);
+                ctx.lineTo(x + this.width/2 - 10 + legOffset, y + 80);
+                ctx.moveTo(x + this.width/2, y + 55);
+                ctx.lineTo(x + this.width/2 + 10 - legOffset, y + 80);
+                ctx.stroke();
+                
+                // Arms
+                if (this.isSliding) {
+                    ctx.beginPath();
+                    ctx.moveTo(x + this.width/2, y + 35);
+                    ctx.lineTo(x + this.width/2 - 15, y + 45);
+                    ctx.moveTo(x + this.width/2, y + 35);
+                    ctx.lineTo(x + this.width/2 + 15, y + 45);
+                    ctx.stroke();
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(x + this.width/2, y + 35);
+                    ctx.lineTo(x + this.width/2 - 15, y + 50 + Math.sin(this.runFrame) * 5);
+                    ctx.moveTo(x + this.width/2, y + 35);
+                    ctx.lineTo(x + this.width/2 + 15, y + 50 - Math.sin(this.runFrame) * 5);
+                    ctx.stroke();
+                }
+                
+                ctx.shadowBlur = 0;
+            }
+        };
+        
+        // Obstacles
+        let obstacles = [];
+        
+        function createObstacle() {
+            const types = ['jump', 'slide', 'ground'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            if (type === 'jump') {
+                return {
+                    x: canvas.width + 50,
+                    y: player.groundY - 60,
+                    width: 40,
+                    height: 60,
+                    type: 'jump'
+                };
+            } else if (type === 'slide') {
+                return {
+                    x: canvas.width + 50,
+                    y: player.groundY - 90,
+                    width: 60,
+                    height: 90,
+                    type: 'slide'
+                };
+            } else {
+                return {
+                    x: canvas.width + 50,
+                    y: player.groundY - 40,
+                    width: 30,
+                    height: 40,
+                    type: 'ground'
+                };
+            }
+        }
+        
+        // Coins
+        let coinItems = [];
+        
+        function createCoin() {
+            return {
+                x: canvas.width + 50,
+                y: player.groundY - 120 - Math.random() * 60,
+                radius: 15,
+                collected: false,
+                angle: Math.random() * Math.PI * 2
+            };
+        }
+        
+        // Background
+        let bgOffset = 0;
+        
+        function drawBackground() {
+            // Sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#0f0c29');
+            gradient.addColorStop(0.5, '#302b63');
+            gradient.addColorStop(1, '#24243e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Stars
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            for (let i = 0; i < 50; i++) {
+                const starX = (i * 73 + bgOffset * 0.1) % canvas.width;
+                const starY = (i * 47) % (canvas.height * 0.6);
+                const size = (i % 3) + 1;
+                ctx.beginPath();
+                ctx.arc(starX, starY, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Mountains (parallax)
+            ctx.fillStyle = '#1a1a3e';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            for (let x = 0; x <= canvas.width; x += 50) {
+                const mountainY = player.groundY - 100 - Math.sin((x + bgOffset * 0.3) * 0.01) * 80;
+                ctx.lineTo(x, mountainY);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Ground
+            ctx.fillStyle = '#2d2d5a';
+            ctx.fillRect(0, player.groundY, canvas.width, canvas.height - player.groundY);
+            
+            // Ground line
+            ctx.strokeStyle = '#0ff';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = '#0ff';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(0, player.groundY);
+            ctx.lineTo(canvas.width, player.groundY);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            // Ground pattern
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+            for (let i = 0; i < 20; i++) {
+                const lineX = ((i * 60 - bgOffset) % (canvas.width + 60)) - 30;
+                ctx.fillRect(lineX, player.groundY + 10, 40, 3);
+            }
+        }
+        
+        function updateGame() {
+            if (!gameRunning) return;
+            
+            frameCount++;
+            bgOffset += gameSpeed;
+            score = Math.floor(frameCount / 10);
+            gameSpeed = 5 + score / 500;
+            
+            // Update player
+            player.groundY = canvas.height - 80;
+            player.update();
+            
+            // Spawn obstacles
+            if (frameCount % Math.floor(120 - Math.min(score / 20, 80)) === 0) {
+                obstacles.push(createObstacle());
+            }
+            
+            // Spawn coins
+            if (frameCount % 90 === 0) {
+                coinItems.push(createCoin());
+            }
+            
+            // Update obstacles
+            obstacles = obstacles.filter(obs => {
+                obs.x -= gameSpeed;
+                return obs.x + obs.width > -50;
+            });
+            
+            // Update coins
+            coinItems = coinItems.filter(coin => {
+                coin.x -= gameSpeed;
+                coin.angle += 0.1;
+                return coin.x + coin.radius > -30;
+            });
+            
+            // Collision detection
+            const playerHitbox = player.isSliding ? 
+                { x: player.x, y: player.y, width: player.width, height: 40 } :
+                { x: player.x, y: player.y, width: player.width, height: player.height };
+            
+            for (const obs of obstacles) {
+                if (rectCollision(playerHitbox, obs)) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            // Coin collection
+            coinItems = coinItems.filter(coin => {
+                if (!coin.collected && rectCollision(playerHitbox, { x: coin.x - coin.radius, y: coin.y - coin.radius, width: coin.radius * 2, height: coin.radius * 2 })) {
+                    coin.collected = true;
+                    coins++;
+                    playSound('coin');
+                    return false;
+                }
+                return coin.x + coin.radius > 0;
+            });
+            
+            // Update UI
+            document.getElementById('score').textContent = score;
+            document.getElementById('coins').textContent = coins;
+            
+            drawGame();
+            requestAnimationFrame(updateGame);
+        }
+        
+        function rectCollision(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+        
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawBackground();
+            
+            // Draw coins
+            for (const coin of coinItems) {
+                ctx.save();
+                ctx.translate(coin.x, coin.y);
+                ctx.rotate(coin.angle);
+                
+                // Coin glow
+                ctx.shadowColor = '#ffd700';
+                ctx.shadowBlur = 15;
+                
+                // Coin body
+                const gradient = ctx.createRadialGradient(-3, -3, 0, 0, 0, coin.radius);
+                gradient.addColorStop(0, '#ffd700');
+                gradient.addColorStop(1, '#b8860b');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, coin.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Coin symbol
+                ctx.fillStyle = '#ffd700';
+                ctx.font = 'bold 14px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('$', 0, 1);
+                
+                ctx.restore();
+            }
+            
+            // Draw obstacles
+            for (const obs of obstacles) {
+                // Obstacle glow
+                ctx.shadowColor = '#ff4444';
+                ctx.shadowBlur = 15;
+                
+                if (obs.type === 'jump') {
+                    // Spike obstacle
+                    ctx.fillStyle = '#ff4444';
+                    ctx.beginPath();
+                    ctx.moveTo(obs.x, obs.y + obs.height);
+                    ctx.lineTo(obs.x + obs.width / 2, obs.y);
+                    ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (obs.type === 'slide') {
+                    // High obstacle (must slide)
+                    ctx.fillStyle = '#ff8800';
+                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                    
+                    // Warning stripes
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    for (let i = 0; i < obs.height; i += 15) {
+                        ctx.fillRect(obs.x, obs.y + i, obs.width, 8);
+                    }
+                } else {
+                    // Ground obstacle
+                    ctx.fillStyle = '#ff6666';
+                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                }
+                
+                ctx.shadowBlur = 0;
+            }
+            
+            // Draw player
+            player.draw();
+        }
+        
+        function startGame() {
+            initAudio();
+            gameRunning = true;
+            score = 0;
+            coins = 0;
+            gameSpeed = 5;
+            frameCount = 0;
+            obstacles = [];
+            coinItems = [];
+            player.reset();
+            
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('controls').classList.remove('hidden');
+            
+            updateGame();
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            playSound('death');
+            
+            const highScore = Math.max(score, parseInt(localStorage.getItem('stickmanRunnerHighScore') || '0'));
+            localStorage.setItem('stickmanRunnerHighScore', Math.max(score, highScore).toString());
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalCoins').textContent = coins;
+            document.getElementById('highScore').textContent = highScore;
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+            document.getElementById('controls').classList.add('hidden');
+        }
+        
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+        
+        // Touch controls
+        document.getElementById('jumpBtn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (gameRunning) player.jump();
+        });
+        
+        document.getElementById('jumpBtn').addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (gameRunning) player.jump();
+        });
+        
+        document.getElementById('slideBtn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (gameRunning) player.slide();
+        });
+        
+        document.getElementById('slideBtn').addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (gameRunning) player.slide();
+        });
+        
+        // Canvas touch/click controls
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const y = e.touches[0].clientY - rect.top;
+            if (y < rect.height / 2) player.jump();
+            else player.slide();
+        });
+        
+        canvas.addEventListener('mousedown', (e) => {
+            if (!gameRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            if (y < rect.height / 2) player.jump();
+            else player.slide();
+        });
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                e.preventDefault();
+                player.jump();
+            } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+                e.preventDefault();
+                player.slide();
+            }
+        });
+        
+        // Sound toggle
+        document.getElementById('soundToggle').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+        });
+        
+        // Initial draw
+        player.groundY = canvas.height - 80;
+        player.reset();
+        drawGame();
+    </script>
+</body>
+</html>

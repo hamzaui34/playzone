@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Quiz Rush</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0B0C10; font-family: system-ui, sans-serif; }
+    #game-container { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
+    
+    .ui-bar { display: flex; justify-content: space-between; width: 100%; max-width: 400px; margin-bottom: 12px; }
+    .stat { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px 16px; text-align: center; }
+    .stat-label { font-size: 10px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-value { font-size: 20px; font-weight: 800; color: white; }
+    .score-value { color: #06B6D4; }
+    .question-value { color: #F59E0B; }
+    .streak-value { color: #22C55E; }
+    
+    .game-area { width: 100%; max-width: 400px; }
+    .question-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 24px; margin-bottom: 16px; text-align: center; }
+    .question-text { font-size: 18px; font-weight: 600; color: white; line-height: 1.5; margin-bottom: 8px; }
+    .question-count { font-size: 12px; color: #9CA3AF; }
+    
+    .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .answer-btn { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; font-size: 16px; font-weight: 600; color: white; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .answer-btn:active { transform: scale(0.98); }
+    .answer-btn:hover:not(.disabled) { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+    .answer-btn.correct { background: rgba(34,197,94,0.3); border-color: #22C55E; color: #22C55E; }
+    .answer-btn.wrong { background: rgba(239,68,68,0.3); border-color: #EF4444; color: #EF4444; }
+    .answer-btn.disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .progress-bar { width: 100%; max-width: 400px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #8B5CF6, #06B6D4); transition: width 0.3s; }
+    
+    .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(88,28,135,0.97), rgba(6,182,212,0.97)); z-index: 10; padding: 24px; }
+    .screen.hidden { display: none; }
+    .screen-title { font-size: 42px; font-weight: 800; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.3); margin-bottom: 8px; }
+    .screen-subtitle { font-size: 16px; color: rgba(255,255,255,0.8); margin-bottom: 32px; text-align: center; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; font-size: 16px; font-weight: 700; color: white; background: linear-gradient(135deg, #8B5CF6, #06B6D4); border: none; border-radius: 50px; cursor: pointer; transition: transform 0.1s; box-shadow: 0 0 30px rgba(168,85,247,0.5); }
+    .btn:active { transform: scale(0.95); }
+    .final-score { font-size: 64px; font-weight: 800; color: #06B6D4; }
+    .final-label { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 24px; }
+    .stats-row { display: flex; gap: 24px; margin-bottom: 24px; }
+    .stat-item { text-align: center; }
+    .stat-item .value { font-size: 24px; font-weight: 800; color: white; }
+    .stat-item .label { font-size: 12px; color: #9CA3AF; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div class="ui-bar">
+      <div class="stat"><div class="stat-label">Score</div><div class="stat-value score-value" id="score">0</div></div>
+      <div class="stat"><div class="stat-label">Question</div><div class="stat-value question-value" id="question-num">1/10</div></div>
+      <div class="stat"><div class="stat-label">Streak</div><div class="stat-value streak-value" id="streak">0</div></div>
+    </div>
+    
+    <div class="game-area">
+      <div class="progress-bar"><div class="progress-fill" id="progress" style="width: 10%"></div></div>
+      <div class="question-box">
+        <div class="question-text" id="question-text">Loading...</div>
+        <div class="question-count" id="question-count">Question 1 of 10</div>
+      </div>
+      <div class="answers" id="answers"></div>
+    </div>
+    
+    <div id="menu-screen" class="screen">
+      <div class="screen-title">Quiz Rush</div>
+      <div class="screen-subtitle">Test your knowledge!<br>Answer 10 questions as fast as you can!</div>
+      <button class="btn" id="start-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Start Quiz</button>
+    </div>
+    
+    <div id="gameover-screen" class="screen hidden">
+      <div class="screen-title">Quiz Complete!</div>
+      <div class="final-score" id="final-score">0</div>
+      <div class="final-label">Final Score</div>
+      <div class="stats-row">
+        <div class="stat-item"><div class="value" id="correct-count">0</div><div class="label">Correct</div></div>
+        <div class="stat-item"><div class="value" id="best-streak">0</div><div class="label">Best Streak</div></div>
+        <div class="stat-item"><div class="value" id="accuracy">0%</div><div class="label">Accuracy</div></div>
+      </div>
+      <button class="btn" id="restart-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      { q: "What is the capital of France?", a: ["Paris", "London", "Berlin", "Madrid"], c: 0 },
+      { q: "Which planet is known as the Red Planet?", a: ["Venus", "Mars", "Jupiter", "Saturn"], c: 1 },
+      { q: "What is 15 × 8?", a: ["120", "115", "125", "110"], c: 0 },
+      { q: "Who painted the Mona Lisa?", a: ["Van Gogh", "Picasso", "Da Vinci", "Monet"], c: 2 },
+      { q: "What is the largest ocean on Earth?", a: ["Atlantic", "Indian", "Pacific", "Arctic"], c: 2 },
+      { q: "Which element has the symbol 'O'?", a: ["Gold", "Oxygen", "Osmium", "Oganesson"], c: 1 },
+      { q: "What year did World War II end?", a: ["1943", "1944", "1945", "1946"], c: 2 },
+      { q: "How many continents are there?", a: ["5", "6", "7", "8"], c: 2 },
+      { q: "What is the smallest prime number?", a: ["0", "1", "2", "3"], c: 2 },
+      { q: "Which country has the largest population?", a: ["USA", "India", "China", "Indonesia"], c: 2 },
+      { q: "What is the speed of light?", a: ["300k km/s", "150k km/s", "450k km/s", "600k km/s"], c: 0 },
+      { q: "Who wrote 'Romeo and Juliet'?", a: ["Dickens", "Shakespeare", "Austen", "Hemingway"], c: 1 },
+      { q: "What is the hardest natural substance?", a: ["Gold", "Iron", "Diamond", "Platinum"], c: 2 },
+      { q: "Which gas do plants absorb?", a: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"], c: 2 },
+      { q: "How many players on a soccer team?", a: ["9", "10", "11", "12"], c: 2 },
+    ];
+    
+    let currentQuestions = [], currentIndex = 0, score = 0, streak = 0, bestStreak = 0, correctCount = 0;
+    let gameRunning = false, answered = false;
+    
+    const scoreEl = document.getElementById('score');
+    const questionNumEl = document.getElementById('question-num');
+    const streakEl = document.getElementById('streak');
+    const progressEl = document.getElementById('progress');
+    const questionTextEl = document.getElementById('question-text');
+    const questionCountEl = document.getElementById('question-count');
+    const answersEl = document.getElementById('answers');
+    const menuScreen = document.getElementById('menu-screen');
+    const gameoverScreen = document.getElementById('gameover-screen');
+    
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+    
+    function selectQuestions() {
+      const shuffled = [...questions].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, 10);
+    }
+    
+    function showQuestion() {
+      if (currentIndex >= currentQuestions.length) {
+        endGame();
+        return;
+      }
+      
+      const q = currentQuestions[currentIndex];
+      questionTextEl.textContent = q.q;
+      questionCountEl.textContent = `Question ${currentIndex + 1} of ${currentQuestions.length}`;
+      questionNumEl.textContent = `${currentIndex + 1}/${currentQuestions.length}`;
+      progressEl.style.width = `${((currentIndex + 1) / currentQuestions.length) * 100}%`;
+      
+      const shuffledAnswers = q.a.map((text, i) => ({ text, original: i }));
+      if (q.c !== 0) {
+        const correct = shuffledAnswers.find(a => a.original === q.c);
+        const wrong = shuffledAnswers[q.c];
+        shuffledAnswers[q.c] = { ...wrong, original: q.c };
+        shuffledAnswers.find(a => a.original === q.c && a !== correct).original = wrong.original;
+        shuffledAnswers.sort((a, b) => a.original - b.original);
+      }
+      
+      answersEl.innerHTML = '';
+      shuffledAnswers.forEach((ans, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'answer-btn';
+        btn.textContent = ans.text;
+        btn.onclick = () => handleAnswer(btn, ans.original === q.c);
+        answersEl.appendChild(btn);
+      });
+      
+      answered = false;
+    }
+    
+    function handleAnswer(btn, isCorrect) {
+      if (answered || !gameRunning) return;
+      answered = true;
+      
+      const buttons = answersEl.querySelectorAll('.answer-btn');
+      buttons.forEach(b => b.classList.add('disabled'));
+      
+      if (isCorrect) {
+        btn.classList.add('correct');
+        streak++;
+        bestStreak = Math.max(bestStreak, streak);
+        correctCount++;
+        score += 100 + (streak > 1 ? streak * 10 : 0);
+        scoreEl.textContent = score;
+        streakEl.textContent = streak;
+      } else {
+        btn.classList.add('wrong');
+        streak = 0;
+        streakEl.textContent = streak;
+        buttons.forEach((b, i) => {
+          if (i === currentQuestions[currentIndex].c) b.classList.add('correct');
+        });
+      }
+      
+      setTimeout(() => {
+        currentIndex++;
+        showQuestion();
+      }, 1200);
+    }
+    
+    function startGame() {
+      currentQuestions = selectQuestions();
+      currentIndex = 0;
+      score = 0;
+      streak = 0;
+      bestStreak = 0;
+      correctCount = 0;
+      scoreEl.textContent = '0';
+      streakEl.textContent = '0';
+      gameRunning = true;
+      menuScreen.classList.add('hidden');
+      gameoverScreen.classList.add('hidden');
+      showQuestion();
+    }
+    
+    function endGame() {
+      gameRunning = false;
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('correct-count').textContent = correctCount;
+      document.getElementById('best-streak').textContent = bestStreak;
+      document.getElementById('accuracy').textContent = Math.round((correctCount / currentQuestions.length) * 100) + '%';
+      gameoverScreen.classList.remove('hidden');
+      
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'gameScore', score: score, gameSlug: 'quiz-rush' }, '*');
+      }
+    }
+    
+    document.getElementById('start-btn').onclick = startGame;
+    document.getElementById('restart-btn').onclick = startGame;
+    
+    window.parent.postMessage({ type: 'gameReady', gameSlug: 'quiz-rush' }, '*');
+  </script>
+</body>
+</html>

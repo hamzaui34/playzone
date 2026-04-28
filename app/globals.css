@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0B0C10; /* Very dark rich background */
+  --foreground: #FFFFFF;
 }
 
 @theme inline {
@@ -12,15 +12,73 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+  /* Premium radial gradient for background depth */
+  background-image: radial-gradient(circle at 50% -20%, rgba(107, 33, 168, 0.15) 0%, rgba(11, 12, 16, 1) 50%);
+  background-attachment: fixed;
+}
+
+/* Safe area utilities for mobile */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Custom Scrollbar for desktop, hidden on mobile */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(34,211,238,0.5);
+}
+
+/* Hide scrollbar for touch scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Improve touch responsiveness */
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Ensure smooth animations for mobile */
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    -webkit-animation-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    -webkit-animation-iteration-count: 1;
+    animation-iteration-count: 1;
+  }
+}
+
+/* Better text rendering on mobile */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Utilities for glassmorphism */
+.glass-panel {
+  @apply bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl;
 }
