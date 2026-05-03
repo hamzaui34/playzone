@@ -322,18 +322,18 @@
   // GAME CONFIGURATION
   // ========================================
   var missions = [
-    { id: 1, name: "Empty Lot", difficulty: "easy", time: 60, environment: "parking_lot" },
-    { id: 2, name: "Shopping Plaza", difficulty: "easy", time: 70, environment: "shopping" },
-    { id: 3, name: "City Street", difficulty: "easy", time: 80, environment: "roadside" },
-    { id: 4, name: "Rooftop", difficulty: "medium", time: 90, environment: "rooftop" },
-    { id: 5, name: "Multi-Level", difficulty: "medium", time: 100, environment: "multilevel" },
-    { id: 6, name: "Bridge", difficulty: "medium", time: 110, environment: "bridge" },
-    { id: 7, name: "Mountain", difficulty: "hard", time: 120, environment: "mountain" },
-    { id: 8, name: "Industrial", difficulty: "hard", time: 140, environment: "industrial" },
-    { id: 9, name: "Night Mode", difficulty: "hard", time: 150, environment: "night" },
-    { id: 10, name: "Underground", difficulty: "advanced", time: 160, environment: "underground" },
-    { id: 11, name: "Rainy Day", difficulty: "advanced", time: 170, environment: "rain" },
-    { id: 12, name: "Expert Drive", difficulty: "advanced", time: 180, environment: "expert" }
+    { id: 1, name: "Empty Lot", difficulty: "easy", time: 60, environment: "parking_lot", coins: 50 },
+    { id: 2, name: "Shopping Plaza", difficulty: "easy", time: 70, environment: "shopping", coins: 75 },
+    { id: 3, name: "City Street", difficulty: "easy", time: 80, environment: "roadside", coins: 100 },
+    { id: 4, name: "Rooftop", difficulty: "medium", time: 90, environment: "rooftop", coins: 150 },
+    { id: 5, name: "Multi-Level", difficulty: "medium", time: 100, environment: "multilevel", coins: 200 },
+    { id: 6, name: "Bridge", difficulty: "medium", time: 110, environment: "bridge", coins: 250 },
+    { id: 7, name: "Mountain", difficulty: "hard", time: 120, environment: "mountain", coins: 350 },
+    { id: 8, name: "Industrial", difficulty: "hard", time: 140, environment: "industrial", coins: 450 },
+    { id: 9, name: "Night Mode", difficulty: "hard", time: 150, environment: "night", coins: 500 },
+    { id: 10, name: "Underground", difficulty: "advanced", time: 160, environment: "underground", coins: 650 },
+    { id: 11, name: "Rainy Day", difficulty: "advanced", time: 170, environment: "rain", coins: 750 },
+    { id: 12, name: "Expert Drive", difficulty: "advanced", time: 180, environment: "expert", coins: 1000 }
   ];
   
   var environmentConfigs = {
@@ -420,10 +420,139 @@
   };
   
   var carModels = [
-    { name: 'Sport', bodyColor: '#2563eb', accentColor: '#1e40af', windowColor: '#1e3a5f' },
-    { name: 'Luxury', bodyColor: '#1f2937', accentColor: '#374151', windowColor: '#0f172a' },
-    { name: 'Classic', bodyColor: '#991b1b', accentColor: '#7f1d1d', windowColor: '#450a0a' }
+    { 
+      name: ' sedan', 
+      bodyColor: '#2563eb', 
+      accentColor: '#1e40af', 
+      windowColor: '#1e3a5f',
+      price: 0,
+      maxSpeed: 5.5,
+      acceleration: 0.11,
+      brakeForce: 0.22,
+      turnSpeed: 0.032,
+      unlocked: true,
+      desc: 'Balanced'
+    },
+    { 
+      name: 'Sport', 
+      bodyColor: '#dc2626', 
+      accentColor: '#991b1b', 
+      windowColor: '#450a0a',
+      price: 500,
+      maxSpeed: 6.5,
+      acceleration: 0.15,
+      brakeForce: 0.28,
+      turnSpeed: 0.04,
+      unlocked: false,
+      desc: 'Fast & Agile'
+    },
+    { 
+      name: 'Luxury', 
+      bodyColor: '#1f2937', 
+      accentColor: '#374151', 
+      windowColor: '#0f172a',
+      price: 800,
+      maxSpeed: 5,
+      acceleration: 0.09,
+      brakeForce: 0.35,
+      turnSpeed: 0.028,
+      unlocked: false,
+      desc: 'Great Braking'
+    },
+    { 
+      name: 'Truck', 
+      bodyColor: '#16a34a', 
+      accentColor: '#166534', 
+      windowColor: '#052e16',
+      price: 1200,
+      maxSpeed: 4.5,
+      acceleration: 0.08,
+      brakeForce: 0.4,
+      turnSpeed: 0.025,
+      unlocked: false,
+      desc: 'Slow but Grip'
+    },
+    { 
+      name: 'Race', 
+      bodyColor: '#9333ea', 
+      accentColor: '#7c3aed', 
+      windowColor: '#3b0764',
+      price: 2000,
+      maxSpeed: 7.5,
+      acceleration: 0.18,
+      brakeForce: 0.3,
+      turnSpeed: 0.045,
+      unlocked: false,
+      desc: 'Maximum Speed'
+    },
+    { 
+      name: 'Drift', 
+      bodyColor: '#f59e0b', 
+      accentColor: '#d97706', 
+      windowColor: '#78350f',
+      price: 3000,
+      maxSpeed: 6,
+      acceleration: 0.14,
+      brakeForce: 0.2,
+      turnSpeed: 0.055,
+      unlocked: false,
+      desc: 'Drift King'
+    }
   ];
+  
+  var playerData = {
+    coins: 0,
+    unlockedCars: [0],
+    highestLevel: 1,
+    totalPerfects: 0,
+    totalPlays: 0
+  };
+  
+  function loadPlayerData() {
+    try {
+      var saved = localStorage.getItem('carParking_player');
+      if (saved) {
+        var data = JSON.parse(saved);
+        playerData.coins = data.coins || 0;
+        playerData.unlockedCars = data.unlockedCars || [0];
+        playerData.highestLevel = data.highestLevel || 1;
+        playerData.totalPerfects = data.totalPerfects || 0;
+        playerData.totalPlays = data.totalPlays || 0;
+        
+        carModels.forEach(function(cm, idx) {
+          cm.unlocked = playerData.unlockedCars.indexOf(idx) >= 0;
+        });
+      }
+    } catch (e) {
+      log('Could not load player data');
+    }
+  }
+  
+  function savePlayerData() {
+    try {
+      localStorage.setItem('carParking_player', JSON.stringify(playerData));
+    } catch (e) {
+      log('Could not save player data');
+    }
+  }
+  
+  function addCoins(amount) {
+    playerData.coins += amount;
+    savePlayerData();
+  }
+  
+  function unlockCar(carIndex) {
+    var car = carModels[carIndex];
+    if (!car || car.unlocked || playerData.coins < car.price) return false;
+    
+    playerData.coins -= car.price;
+    car.unlocked = true;
+    playerData.unlockedCars.push(carIndex);
+    savePlayerData();
+    return true;
+  }
+  
+  loadPlayerData();
   
   var world = { width: 1200, height: 1000 };
   var obstacles = [];
@@ -544,40 +673,83 @@
     var container = document.getElementById('missions-list');
     if (!container) return;
     
-    var carSelect = document.createElement('div');
-    carSelect.style.cssText = 'margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px;';
-    carSelect.innerHTML = '<div style="color: white; font-weight: bold; margin-bottom: 10px;">Select Car:</div>';
+    container.innerHTML = '';
+    
+    var coinDisplay = document.createElement('div');
+    coinDisplay.style.cssText = 'text-align: center; margin-bottom: 15px; padding: 12px; background: rgba(251, 191, 36, 0.2); border-radius: 10px; border: 2px solid #fbbf24;';
+    coinDisplay.innerHTML = '<div style="color: #fbbf24; font-size: 24px; font-weight: bold;">' + playerData.coins + ' COINS</div>' +
+                       '<div style="color: #9ca3af; font-size: 11px;">Level: ' + playerData.highestLevel + ' | Perfects: ' + playerData.totalPerfects + '</div>';
+    container.appendChild(coinDisplay);
+    
+    var shopTitle = document.createElement('div');
+    shopTitle.style.cssText = 'color: white; font-weight: bold; margin: 15px 0 10px;';
+    shopTitle.textContent = 'GARAGE - Select Car:';
+    container.appendChild(shopTitle);
     
     carModels.forEach(function(cm, idx) {
-      var btn = document.createElement('button');
-      btn.style.cssText = 'margin: 5px; padding: 10px 20px; background: ' + (idx === player.model ? '#2563eb' : 'rgba(255,255,255,0.2)') + '; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;';
-      btn.textContent = cm.name;
-      btn.onclick = function() {
-        player.model = idx;
-        showMissionButtons();
+      var carDiv = document.createElement('div');
+      carDiv.style.cssText = 'margin: 8px 0; padding: 12px; background: ' + (idx === player.model ? 'rgba(37, 99, 235, 0.3)' : 'rgba(255,255,255,0.1)') + '; border-radius: 10px; border: 2px solid ' + (idx === player.model ? '#3b82f6' : 'transparent') + '; cursor: pointer;';
+      carDiv.onclick = function() {
+        if (cm.unlocked) {
+          player.model = idx;
+          applyCarStats(idx);
+          showMissionButtons();
+        } else if (unlockCar(idx)) {
+          showMissionButtons();
+        }
       };
-      carSelect.appendChild(btn);
+      
+      var carInfo = '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+                 '<div>' +
+                   '<div style="color: ' + cm.bodyColor + '; font-weight: bold; font-size: 16px;">' + cm.name + '</div>' +
+                   '<div style="color: #9ca3af; font-size: 11px;">' + cm.desc + '</div>' +
+                 '</div>';
+      
+      if (cm.unlocked) {
+        carInfo += '<div style="color: #22c55e; font-weight: bold;">OWNED</div>';
+      } else {
+        carInfo += '<div style="color: ' + (playerData.coins >= cm.price ? '#fbbf24' : '#ef4444') + '; font-weight: bold;">' + cm.price + ' coins</div>';
+      }
+      
+      carDiv.innerHTML = carInfo;
+      container.appendChild(carDiv);
     });
     
-    container.appendChild(carSelect);
-    container.innerHTML = '';
-    container.appendChild(carSelect);
+    var missionTitle = document.createElement('div');
+    missionTitle.style.cssText = 'color: white; font-weight: bold; margin: 20px 0 10px;';
+    missionTitle.textContent = 'MISSIONS:';
+    container.appendChild(missionTitle);
     
     missions.forEach(function(m) {
+      var locked = m.id > playerData.highestLevel;
       var btn = document.createElement('div');
       btn.className = 'mission-card';
-      btn.style.cssText = 'padding: 15px; margin: 8px 0; background: rgba(255,255,255,0.1); border-radius: 10px; cursor: pointer; color: white; display: block;';
+      btn.style.cssText = 'padding: 15px; margin: 8px 0; background: ' + (locked ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)') + '; border-radius: 10px; cursor: ' + (locked ? 'not-allowed' : 'pointer') + '; color: ' + (locked ? '#6b7280' : 'white') + '; display: block; opacity: ' + (locked ? 0.5 : 1) + ';';
       btn.innerHTML = '<div style="font-weight: bold;">Mission ' + m.id + ': ' + m.name + '</div>' +
-                      '<div style="font-size: 12px; color: #aaa;">' + m.difficulty.toUpperCase() + ' | ' + m.time + 's | ' + m.environment + '</div>';
+                    '<div style="font-size: 12px; color: #aaa;">' + m.difficulty.toUpperCase() + ' | ' + m.time + 's | +' + m.coins + ' coins</div>';
       
-      btn.onclick = function(e) {
-        e.stopPropagation();
-        startMission(m.id);
-      };
+      if (!locked) {
+        btn.onclick = function(e) {
+          e.stopPropagation();
+          startMission(m.id);
+        };
+      }
       
       container.appendChild(btn);
     });
   }
+  
+  function applyCarStats(carIndex) {
+    var car = carModels[carIndex];
+    if (!car) return;
+    
+    player.maxSpeed = car.maxSpeed;
+    player.acceleration = car.acceleration;
+    player.brakeForce = car.brakeForce;
+    player.turnSpeed = car.turnSpeed;
+  }
+  
+  applyCarStats(player.model);
   
   function startMission(missionId) {
     var mission = missions.find(function(m) { return m.id === missionId; });
@@ -1053,7 +1225,21 @@
   
   function missionComplete(isPerfect) {
     game.state = 'success';
-    game.score = Math.floor(game.timeLeft * 20 + 500);
+    var baseScore = Math.floor(game.timeLeft * 20 + 500);
+    var missionCoins = game.currentMission ? game.currentMission.coins : 50;
+    var perfectBonus = isPerfect ? Math.floor(missionCoins * 0.5) : 0;
+    var totalCoins = missionCoins + perfectBonus;
+    
+    game.score = baseScore + (isPerfect ? 200 : 0);
+    
+    playerData.totalPlays++;
+    playerData.totalPerfects += isPerfect ? 1 : 0;
+    
+    if (game.currentMission && game.currentMission.id >= playerData.highestLevel) {
+      playerData.highestLevel = Math.min(12, game.currentMission.id + 1);
+    }
+    
+    addCoins(totalCoins);
     
     var titleEl = document.querySelector('.result-title');
     if (titleEl) {
@@ -1061,7 +1247,9 @@
     }
     
     var scoreEl = document.getElementById('success-score');
-    if (scoreEl) scoreEl.textContent = game.score;
+    if (scoreEl) {
+      scoreEl.textContent = game.score + '\n+' + totalCoins + ' coins';
+    }
     
     showScreen('success-screen');
   }
