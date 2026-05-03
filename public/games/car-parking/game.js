@@ -1065,8 +1065,10 @@ loadPlayerData();
     player.velocityX = 0;
     player.velocityY = 0;
     
-    camera.x = 0;
-    camera.y = 0;
+    camera.x = player.x;
+    camera.y = player.y;
+    camera.targetX = player.x;
+    camera.targetY = player.y;
     
     generateWorld(mission);
     showScreen('gameplay');
@@ -1768,8 +1770,8 @@ function update(dt) {
   // DRAWING
   // ========================================
   function draw() {
-    ctx.fillStyle = game.currentMission ? 
-      environmentConfigs[game.currentMission.environment].bg : '#1a1a2a';
+    // Clear screen
+    ctx.fillStyle = '#0B0C10';
     ctx.fillRect(0, 0, W, H);
     
     if (game.state === 'menu' || game.state === 'countdown' || game.state === 'loading') {
@@ -1779,17 +1781,40 @@ function update(dt) {
     
     if (game.state !== 'playing' && game.state !== 'success' && game.state !== 'fail') return;
     
+    // Save context before camera transform
     ctx.save();
+    
+    // Camera transform: center on player
+    // Move to screen center
     ctx.translate(W / 2, H / 2);
+    // Apply zoom
     ctx.scale(camera.zoom, camera.zoom);
-    ctx.translate(-W / 2, -H / 2);
+    // Move back so camera position is at center
     ctx.translate(-camera.x, -camera.y);
     
+    // Now draw world - everything here is in world coordinates
     drawWorld();
     drawTireTracks();
     drawCar(player.x, player.y, player.angle, '#3388ff');
     
+    // Restore context - removes all camera transforms
     ctx.restore();
+    
+    // Debug: draw camera center indicator (optional)
+    // drawCameraDebug();
+  }
+  
+  function drawCameraDebug() {
+    // Draw player position marker (center of screen when camera is correct)
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+    ctx.beginPath();
+    ctx.arc(W / 2, H / 2, 10, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw camera target
+    ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
+    ctx.fillText('Cam: ' + Math.round(camera.x) + ',' + Math.round(camera.y), 10, 20);
+    ctx.fillText('Player: ' + Math.round(player.x) + ',' + Math.round(player.y), 10, 40);
   }
   
   function drawTireTracks() {
