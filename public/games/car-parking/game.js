@@ -322,28 +322,69 @@
   // GAME CONFIGURATION
   // ========================================
   var missions = [
-    { id: 1, name: "Empty Lot", difficulty: "easy", time: 60, environment: "parking" },
-    { id: 2, name: "Basic Parking", difficulty: "easy", time: 70, environment: "parking" },
-    { id: 3, name: "Side Spot", difficulty: "easy", time: 80, environment: "parking" },
-    { id: 4, name: "City Street", difficulty: "medium", time: 90, environment: "city" },
-    { id: 5, name: "Shopping Area", difficulty: "medium", time: 100, environment: "city" },
-    { id: 6, name: "Narrow Lane", difficulty: "medium", time: 110, environment: "residential" },
-    { id: 7, name: "Traffic Jam", difficulty: "hard", time: 120, environment: "traffic" },
-    { id: 8, name: "Rush Hour", difficulty: "hard", time: 140, environment: "traffic" },
-    { id: 9, name: "Night Parking", difficulty: "hard", time: 150, environment: "night" },
-    { id: 10, name: "Rainy Day", difficulty: "advanced", time: 160, environment: "rain" },
-    { id: 11, name: "Underground", difficulty: "advanced", time: 170, environment: "underground" },
-    { id: 12, name: "Expert Drive", difficulty: "advanced", time: 180, environment: "city" }
+    { id: 1, name: "Empty Lot", difficulty: "easy", time: 60, environment: "parking_lot" },
+    { id: 2, name: "Shopping Plaza", difficulty: "easy", time: 70, environment: "shopping" },
+    { id: 3, name: "City Street", difficulty: "easy", time: 80, environment: "roadside" },
+    { id: 4, name: "Rooftop", difficulty: "medium", time: 90, environment: "rooftop" },
+    { id: 5, name: "Multi-Level", difficulty: "medium", time: 100, environment: "multilevel" },
+    { id: 6, name: "Bridge", difficulty: "medium", time: 110, environment: "bridge" },
+    { id: 7, name: "Mountain", difficulty: "hard", time: 120, environment: "mountain" },
+    { id: 8, name: "Industrial", difficulty: "hard", time: 140, environment: "industrial" },
+    { id: 9, name: "Night Mode", difficulty: "hard", time: 150, environment: "night" },
+    { id: 10, name: "Underground", difficulty: "advanced", time: 160, environment: "underground" },
+    { id: 11, name: "Rainy Day", difficulty: "advanced", time: 170, environment: "rain" },
+    { id: 12, name: "Expert Drive", difficulty: "advanced", time: 180, environment: "expert" }
   ];
   
   var environmentConfigs = {
-    parking: { bg: '#3a5a3a', road: '#555', lines: '#fff' },
-    city: { bg: '#2a4a5a', road: '#333', lines: '#ffcc00' },
-    residential: { bg: '#4a6a4a', road: '#555', lines: '#fff' },
-    traffic: { bg: '#3a4a5a', road: '#222', lines: '#ffcc00' },
-    night: { bg: '#1a1a2a', road: '#333', lines: '#fff' },
-    rain: { bg: '#2a3a4a', road: '#222', lines: '#fff' },
-    underground: { bg: '#2a2a3a', road: '#444', lines: '#ffcc00' }
+    parking_lot: { 
+      bg: '#374151', road: '#1f2937', lines: '#fbbf24', floor: '#4b5563',
+      name: 'Parking Lot', wallColor: '#6b7280', hasAsphalt: true
+    },
+    shopping: { 
+      bg: '#1e3a5f', road: '#172554', lines: '#ffffff', floor: '#1e40af',
+      name: 'Shopping Plaza', wallColor: '#3b82f6', hasAsphalt: true
+    },
+    roadside: { 
+      bg: '#1f2937', road: '#111827', lines: '#fbbf24', floor: '#374151',
+      name: 'Roadside', wallColor: '#4b5563', hasAsphalt: true
+    },
+    rooftop: { 
+      bg: '#1e3a8a', road: '#1e40af', lines: '#ffffff', floor: '#3730a3',
+      name: 'Rooftop', wallColor: '#6366f1', hasAsphalt: false
+    },
+    multilevel: { 
+      bg: '#292524', road: '#1c1917', lines: '#f97316', floor: '#3c3836',
+      name: 'Multi-Level', wallColor: '#78716c', hasAsphalt: true
+    },
+    bridge: { 
+      bg: '#0f172a', road: '#1e3a8a', lines: '#ffffff', floor: '#1e40af',
+      name: 'Bridge', wallColor: '#38bdf8', hasAsphalt: false
+    },
+    mountain: { 
+      bg: '#14532d', road: '#166534', lines: '#fbbf24', floor: '#15803d',
+      name: 'Mountain', wallColor: '#22c55e', hasAsphalt: false
+    },
+    industrial: { 
+      bg: '#3f3f46', road: '#27272a', lines: '#f97316', floor: '#52525b',
+      name: 'Industrial', wallColor: '#71717a', hasAsphalt: true
+    },
+    night: { 
+      bg: '#0a0a0f', road: '#171717', lines: '#fbbf24', floor: '#262626',
+      name: 'Night Mode', wallColor: '#52525b', hasAsphalt: true
+    },
+    underground: { 
+      bg: '#1c1c1c', road: '#262626', lines: '#facc15', floor: '#404040',
+      name: 'Underground', wallColor: '#a1a1aa', hasAsphalt: true
+    },
+    rain: { 
+      bg: '#1e3a5f', road: '#172554', lines: '#ffffff', floor: '#1e40af',
+      name: 'Rainy Day', wallColor: '#3b82f6', hasAsphalt: true
+    },
+    expert: { 
+      bg: '#1f2937', road: '#111827', lines: '#ff6b6b', floor: '#374151',
+      name: 'Expert', wallColor: '#ef4444', hasAsphalt: true
+    }
   };
   
   // ========================================
@@ -571,53 +612,256 @@
     particles = [];
     
     var env = mission.environment;
+    var config = environmentConfigs[env] || environmentConfigs.parking_lot;
     
-    if (env === 'parking' || env === 'underground') {
-      for (var row = 0; row < 4; row++) {
+    if (env === 'parking_lot') {
+      world.width = 1200;
+      world.height = 1200;
+      
+      for (var row = 0; row < 5; row++) {
+        for (var col = 0; col < 4; col++) {
+          parkingSpots.push({
+            x: 180 + col * 140,
+            y: 180 + row * 160,
+            width: 65,
+            height: 38,
+            target: row === 4 && col === 1
+          });
+        }
+      }
+      
+      obstacles.push({ type: 'wall', x: 80, y: 600, w: 20, h: 1200 });
+      obstacles.push({ type: 'wall', x: 700, y: 600, w: 20, h: 1200 });
+      obstacles.push({ type: 'wall', x: 390, y: 60, w: 640, h: 20 });
+      obstacles.push({ type: 'wall', x: 390, y: 1140, w: 640, h: 20 });
+      
+      for (var i = 0; i < 12; i++) {
+        obstacles.push({
+          type: 'car',
+          x: 120 + Math.random() * 500,
+          y: 120 + Math.random() * 900,
+          angle: Math.random() * 0.3 - 0.15,
+          color: ['#dc2626', '#2563eb', '#16a34a', '#eab308', '#475569'][Math.floor(Math.random() * 5)]
+        });
+      }
+      
+      for (var i = 0; i < 20; i++) {
+        if (Math.random() > 0.5) {
+          obstacles.push({
+            type: 'cone',
+            x: 100 + Math.random() * 580,
+            y: 100 + Math.random() * 1000
+          });
+        }
+      }
+      
+    } else if (env === 'shopping') {
+      world.width = 1400;
+      world.height = 1000;
+      
+      for (var row = 0; row < 3; row++) {
         for (var col = 0; col < 5; col++) {
           parkingSpots.push({
-            x: 200 + col * 120,
-            y: 150 + row * 140,
+            x: 200 + col * 130,
+            y: 200 + row * 170,
+            width: 60,
+            height: 35,
+            target: row === 2 && col === 2
+          });
+        }
+      }
+      
+      obstacles.push({ type: 'building', x: 700, y: 100, w: 600, h: 800 });
+      obstacles.push({ type: 'entrance', x: 700, y: 500 });
+      
+      for (var i = 0; i < 10; i++) {
+        obstacles.push({
+          type: 'car',
+          x: 150 + Math.random() * 450,
+          y: 180 + Math.random() * 600,
+          angle: Math.random() * 0.4 - 0.2,
+          color: ['#dc2626', '#2563eb', '#16a34a', '#eab308', '#7c3aed'][Math.floor(Math.random() * 5)]
+        });
+      }
+      
+    } else if (env === 'roadside') {
+      world.width = 1600;
+      world.height = 800;
+      
+      parkingSpots.push({ x: 150, y: 180, width: 60, height: 35, target: true });
+      parkingSpots.push({ x: 150, y: 320, width: 60, height: 35, target: false });
+      parkingSpots.push({ x: 150, y: 460, width: 60, height: 35, target: false });
+      parkingSpots.push({ x: 150, y: 600, width: 60, height: 35, target: false });
+      
+      parkingSpots.push({ x: 800, y: 180, width: 60, height: 35, target: false });
+      parkingSpots.push({ x: 800, y: 320, width: 60, height: 35, target: false });
+      parkingSpots.push({ x: 800, y: 460, width: 60, height: 35, target: false });
+      parkingSpots.push({ x: 800, y: 600, width: 60, height: 35, target: false });
+      
+      obstacles.push({ type: 'sidewalk', y: 100, h: 60 });
+      obstacles.push({ type: 'sidewalk', y: 700, h: 60 });
+      
+      for (var i = 0; i < 8; i++) {
+        obstacles.push({ type: 'tree', x: 450 + i * 130, y: 70 });
+      }
+      
+    } else if (env === 'rooftop') {
+      world.width = 1000;
+      world.height = 800;
+      
+      for (var row = 0; row < 3; row++) {
+        for (var col = 0; col < 4; col++) {
+          parkingSpots.push({
+            x: 180 + col * 120,
+            y: 180 + row * 150,
+            width: 55,
+            height: 32,
+            target: row === 2 && col === 1
+          });
+        }
+      }
+      
+      obstacles.push({ type: 'edge', y: 50, h: 30 });
+      obstacles.push({ type: 'edge', y: 750, h: 30 });
+      obstacles.push({ type: 'railing', x: 100, y: 400 });
+      obstacles.push({ type: 'railing', x: 900, y: 400 });
+      
+      for (var i = 0; i < 6; i++) {
+        obstacles.push({
+          type: 'car',
+          x: 150 + Math.random() * 350,
+          y: 150 + Math.random() * 450,
+          angle: Math.random() * 0.3,
+          color: ['#dc2626', '#2563eb', '#16a34a', '#eab308'][Math.floor(Math.random() * 4)]
+        });
+      }
+      
+    } else if (env === 'multilevel') {
+      world.width = 900;
+      world.height = 900;
+      
+      for (var row = 0; row < 4; row++) {
+        for (var col = 0; col < 3; col++) {
+          parkingSpots.push({
+            x: 150 + col * 150,
+            y: 150 + row * 130,
+            width: 60,
+            height: 35,
+            target: row === 3 && col === 1
+          });
+        }
+      }
+      
+      obstacles.push({ type: 'pillar', x: 80, y: 80 });
+      obstacles.push({ type: 'pillar', x: 450, y: 80 });
+      obstacles.push({ type: 'pillar', x: 80, y: 450 });
+      obstacles.push({ type: 'pillar', x: 450, y: 450 });
+      obstacles.push({ type: 'pillar', x: 80, y: 800 });
+      obstacles.push({ type: 'pillar', x: 450, y: 800 });
+      
+    } else if (env === 'bridge') {
+      world.width = 1400;
+      world.height = 600;
+      
+      for (var col = 0; col < 6; col++) {
+        parkingSpots.push({
+          x: 250 + col * 150,
+          y: 200,
+          width: 55,
+          height: 32,
+          target: col === 4
+        });
+        parkingSpots.push({
+          x: 250 + col * 150,
+          y: 400,
+          width: 55,
+          height: 32,
+          target: false
+        });
+      }
+      
+      obstacles.push({ type: 'bridge_rail', x: 700, y: 100 });
+      obstacles.push({ type: 'bridge_rail', x: 700, y: 500 });
+      
+    } else if (env === 'mountain') {
+      world.width = 1200;
+      world.height = 1000;
+      
+      for (var row = 0; row < 3; row++) {
+        for (var col = 0; col < 4; col++) {
+          parkingSpots.push({
+            x: 200 + col * 160,
+            y: 300 + row * 180,
             width: 70,
             height: 40,
+            target: row === 2 && col === 1
+          });
+        }
+      }
+      
+      obstacles.push({ type: 'barrier', x: 150, y: 100, w: 20, h: 200 });
+      obstacles.push({ type: 'barrier', x: 800, y: 100, w: 20, h: 200 });
+      obstacles.push({ type: 'rock', x: 100, y: 300 });
+      obstacles.push({ type: 'rock', x: 850, y: 350 });
+      obstacles.push({ type: 'rock', x: 500, y: 150 });
+      obstacles.push({ type: 'rock', x: 300, y: 750 });
+      obstacles.push({ type: 'rock', x: 600, y: 800 });
+      
+    } else if (env === 'industrial' || env === 'expert') {
+      world.width = 1100;
+      world.height = 900;
+      
+      for (var row = 0; row < 4; row++) {
+        for (var col = 0; col < 4; col++) {
+          parkingSpots.push({
+            x: 180 + col * 140,
+            y: 180 + row * 140,
+            width: 60,
+            height: 35,
             target: row === 3 && col === 2
           });
         }
       }
       
-      for (var i = 0; i < 15; i++) {
-        obstacles.push({
-          type: 'car',
-          x: 150 + Math.random() * 600,
-          y: 100 + Math.random() * 600,
-          angle: Math.random() * 0.4 - 0.2,
-          color: ['#cc3333', '#3366cc', '#33cc66', '#cccc33', '#333333'][Math.floor(Math.random() * 5)]
-        });
+      obstacles.push({ type: 'concrete', x: 550, y: 100, w: 200, h: 100 });
+      obstacles.push({ type: 'barrier', x: 50, y: 100, w: 20, h: 200 });
+      obstacles.push({ type: 'barrier', x: 50, y: 600, w: 20, h: 200 });
+      
+    } else if (env === 'night' || env === 'underground' || env === 'rain') {
+      world.width = 1000;
+      world.height = 800;
+      
+      for (var row = 0; row < 3; row++) {
+        for (var col = 0; col < 4; col++) {
+          parkingSpots.push({
+            x: 150 + col * 130,
+            y: 150 + row * 160,
+            width: 55,
+            height: 32,
+            target: row === 2 && col === 1
+          });
+        }
       }
-    } else if (env === 'city' || env === 'traffic') {
-      obstacles.push({ type: 'road', x: 600, y: 300, w: 100, h: 400 });
-      obstacles.push({ type: 'road', x: 300, y: 500, w: 600, h: 80 });
       
-      parkingSpots.push({ x: 150, y: 150, width: 70, height: 40, target: true });
-      parkingSpots.push({ x: 150, y: 300, width: 70, height: 40, target: false });
-      parkingSpots.push({ x: 900, y: 150, width: 70, height: 40, target: false });
-      parkingSpots.push({ x: 900, y: 300, width: 70, height: 40, target: false });
+      obstacles.push({ type: 'light_post', x: 80, y: 80 });
+      obstacles.push({ type: 'light_post', x: 500, y: 80 });
+      obstacles.push({ type: 'light_post', x: 500, y: 400 });
+      obstacles.push({ type: 'light_post', x: 80, y: 400 });
       
-      obstacles.push({ type: 'building', x: 200, y: 150, w: 80, h: 60 });
-      obstacles.push({ type: 'building', x: 400, y: 150, w: 80, h: 60 });
-      obstacles.push({ type: 'building', x: 800, y: 150, w: 80, h: 60 });
-      obstacles.push({ type: 'building', x: 200, y: 700, w: 80, h: 60 });
-      obstacles.push({ type: 'building', x: 400, y: 700, w: 80, h: 60 });
-      obstacles.push({ type: 'building', x: 800, y: 700, w: 80, h: 60 });
+      if (env === 'rain') {
+        for (var i = 0; i < 8; i++) {
+          obstacles.push({
+            type: 'puddle',
+            x: 100 + Math.random() * 800,
+            y: 150 + Math.random() * 500
+          });
+        }
+      }
+      
     } else {
       parkingSpots.push({ x: 200, y: 200, width: 70, height: 40, target: true });
       parkingSpots.push({ x: 400, y: 200, width: 70, height: 40, target: false });
       parkingSpots.push({ x: 600, y: 200, width: 70, height: 40, target: false });
-      
-      obstacles.push({ type: 'house', x: 200, y: 500, w: 60, h: 40 });
-      obstacles.push({ type: 'house', x: 400, y: 500, w: 60, h: 40 });
-      obstacles.push({ type: 'house', x: 600, y: 500, w: 60, h: 40 });
-      obstacles.push({ type: 'house', x: 800, y: 500, w: 60, h: 40 });
     }
   }
   
@@ -856,39 +1100,177 @@
   }
   
   function drawWorld() {
+    var config = environmentConfigs[game.currentMission.environment] || environmentConfigs.parking_lot;
+    
+    ctx.fillStyle = config.bg;
+    ctx.fillRect(0, 0, W, H);
+    
+    if (config.hasAsphalt) {
+      drawAsphaltTexture(config);
+    } else {
+      drawConcreteTexture(config);
+    }
+    
+    drawParkingSpots();
+    drawObstacles(config);
+  }
+  
+  function drawAsphaltTexture(config) {
+    ctx.fillStyle = config.road;
+    ctx.fillRect(0, 0, W, H);
+    
+    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+    for (var i = 0; i < 50; i++) {
+      var x = (i * 73) % W;
+      var y = (i * 97) % H;
+      ctx.fillRect(x, y, 2, 2);
+    }
+    
+    ctx.strokeStyle = config.lines;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([20, 15]);
+    
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    
+    ctx.setLineDash([]);
+  }
+  
+  function drawConcreteTexture(config) {
+    ctx.fillStyle = config.floor;
+    ctx.fillRect(0, 0, W, H);
+    
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.lineWidth = 1;
+    for (var i = 0; i < 20; i++) {
+      ctx.strokeRect(50 + i * 60, 50 + i * 45, 50, 40);
+    }
+  }
+  
+  function drawParkingSpots() {
     for (var i = 0; i < parkingSpots.length; i++) {
       var spot = parkingSpots[i];
-      ctx.strokeStyle = spot.target ? '#00ff00' : '#ffffff';
-      ctx.lineWidth = spot.target ? 3 : 1;
-      ctx.setLineDash([5, 5]);
+      
+      if (spot.target) {
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.15)';
+        ctx.fillRect(spot.x - spot.width / 2 - 3, spot.y - spot.height / 2 - 3, spot.width + 6, spot.height + 6);
+      }
+      
+      ctx.strokeStyle = spot.target ? '#22c55e' : '#9ca3af';
+      ctx.lineWidth = spot.target ? 3 : 2;
+      ctx.setLineDash([8, 4]);
       ctx.strokeRect(spot.x - spot.width / 2, spot.y - spot.height / 2, spot.width, spot.height);
       ctx.setLineDash([]);
       
-      if (spot.target) {
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
-        ctx.fillRect(spot.x - spot.width / 2, spot.y - spot.height / 2, spot.width, spot.height);
-      }
+      ctx.fillStyle = spot.target ? 'rgba(34, 197, 94, 0.7)' : 'rgba(156, 163, 175, 0.5)';
+      ctx.font = 'bold 10px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(spot.target ? 'TARGET' : '', spot.x, spot.y + 4);
     }
-    
-    for (var j = 0; j < obstacles.length; j++) {
-      var obs = obstacles[j];
+  }
+  
+  function drawObstacles(config) {
+    for (var i = 0; i < obstacles.length; i++) {
+      var obs = obstacles[i];
+      
       if (obs.type === 'car') {
         drawCar(obs.x, obs.y, obs.angle, obs.color);
+      } else if (obs.type === 'wall') {
+        ctx.fillStyle = config.wallColor;
+        ctx.fillRect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
       } else if (obs.type === 'building') {
-        ctx.fillStyle = '#555566';
+        ctx.fillStyle = config.wallColor;
         ctx.fillRect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
-      } else if (obs.type === 'house') {
-        ctx.fillStyle = '#665544';
-        ctx.fillRect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
-        ctx.fillStyle = '#443322';
+        
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.fillRect(obs.x - obs.w / 2 + 5, obs.y + 5, obs.w - 10, 10);
+        
+        ctx.fillStyle = '#fbbf24';
+        for (var w = 0; w < 3; w++) {
+          ctx.fillRect(obs.x - obs.w / 2 + 15 + w * 25, obs.y - obs.h / 2 + 15, 12, 8);
+        }
+      } else if (obs.type === 'cone') {
+        ctx.fillStyle = '#f97316';
         ctx.beginPath();
-        ctx.moveTo(obs.x - obs.w / 2 - 5, obs.y - obs.h / 2);
-        ctx.lineTo(obs.x, obs.y - obs.h / 2 - 20);
-        ctx.lineTo(obs.x + obs.w / 2 + 5, obs.y - obs.h / 2);
+        ctx.moveTo(obs.x, obs.y - 15);
+        ctx.lineTo(obs.x - 8, obs.y + 10);
+        ctx.lineTo(obs.x + 8, obs.y + 10);
+        ctx.closePath();
         ctx.fill();
-      } else if (obs.type === 'road') {
-        ctx.fillStyle = '#333333';
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(obs.x - 5, obs.y - 5, 10, 3);
+      } else if (obs.type === 'tree') {
+        ctx.fillStyle = '#166534';
+        ctx.beginPath();
+        ctx.arc(obs.x, obs.y, 25, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.arc(obs.x, obs.y - 5, 18, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (obs.type === 'sidewalk') {
+        ctx.fillStyle = '#6b7280';
+        ctx.fillRect(0, obs.y, W, obs.h);
+      } else if (obs.type === 'entrance') {
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(obs.x - 30, obs.y - 25, 60, 50);
+        ctx.fillStyle = '#1f2937';
+        ctx.font = 'bold 10px Arial';
+        ctx.fillText('ENTRANCE', obs.x, obs.y + 4);
+      } else if (obs.type === 'edge') {
+        ctx.fillStyle = config.wallColor;
+        ctx.fillRect(0, obs.y, W, obs.h);
+      } else if (obs.type === 'railing') {
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(obs.x, obs.y - 5, 3, 250);
+      } else if (obs.type === 'pillar') {
+        ctx.fillStyle = '#71717a';
+        ctx.fillRect(obs.x - 15, obs.y - 15, 30, 30);
+        ctx.fillStyle = '#52525b';
+        ctx.fillRect(obs.x - 10, obs.y - 10, 20, 20);
+      } else if (obs.type === 'bridge_rail') {
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(obs.x - 5, obs.y - 10, 10, 150);
+      } else if (obs.type === 'barrier') {
+        ctx.fillStyle = '#ef4444';
         ctx.fillRect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
+      } else if (obs.type === 'rock') {
+        ctx.fillStyle = '#57534e';
+        ctx.beginPath();
+        ctx.ellipse(obs.x, obs.y, 30, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (obs.type === 'light_post') {
+        ctx.fillStyle = '#3f3f46';
+        ctx.fillRect(obs.x - 3, obs.y - 15, 6, 50);
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(obs.x, obs.y - 15, 8, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (obs.type === 'concrete') {
+        ctx.fillStyle = '#71717a';
+        ctx.fillRect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
+        ctx.strokeStyle = '#52525b';
+        ctx.strokeRect(obs.x - obs.w / 2 + 3, obs.y - obs.h / 2 + 3, obs.w - 6, obs.h - 6);
+      } else if (obs.type === 'puddle') {
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(obs.x, obs.y, 40, 25, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (obs.type === 'house') {
+        ctx.fillStyle = config.wallColor;
+        ctx.fillRect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
+        
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.moveTo(obs.x, obs.y - obs.h / 2 - 15);
+        ctx.lineTo(obs.x - obs.w / 2 - 5, obs.y);
+        ctx.lineTo(obs.x + obs.w / 2 + 5, obs.y);
+        ctx.closePath();
+        ctx.fill();
       }
     }
   }
