@@ -1162,14 +1162,189 @@
     player.x += player.velocityX;
     player.y += player.velocityY;
     
-    player.x = Math.max(20, Math.min(world.width - 20, player.x));
-    player.y = Math.max(20, Math.min(world.height - 20, player.y));
+    handleCollisions();
+    
+    player.x = Math.max(25, Math.min(world.width - 25, player.x));
+    player.y = Math.max(25, Math.min(world.height - 25, player.y));
     
     camera.x += (player.x - W / 2 - camera.x) * 0.08;
     camera.y += (player.y - H / 2 - camera.y) * 0.08;
     
     checkParking();
     updateMissionUI();
+  }
+  
+  function getPlayerCorners() {
+    var carWidth = player.width;
+    var carLength = player.length;
+    var halfW = carWidth / 2;
+    var halfL = carLength / 2;
+    
+    var cosA = Math.cos(player.angle);
+    var sinA = Math.sin(player.angle);
+    
+    return [
+      { x: player.x + cosA * halfL - sinA * halfW, y: player.y + sinA * halfL + cosA * halfW },
+      { x: player.x + cosA * halfL + sinA * halfW, y: player.y + sinA * halfL - cosA * halfW },
+      { x: player.x - cosA * halfL - sinA * halfW, y: player.y - sinA * halfL + cosA * halfW },
+      { x: player.x - cosA * halfL + sinA * halfW, y: player.y - sinA * halfL - cosA * halfW }
+    ];
+  }
+  
+  function pointInRect(px, py, rx, ry, rw, rh) {
+    return px >= rx - rw / 2 && px <= rx + rw / 2 && py >= ry - rh / 2 && py <= ry + rh / 2;
+  }
+  
+  function rectanglesOverlap(r1x1, r1y1, r1w, r1h, r2x1, r2y1, r2w, r2h, angle) {
+    if (angle) {
+      var corners1 = getPlayerCorners();
+      for (var i = 0; i < 4; i++) {
+        if (pointInRect(corners1[i].x, corners1[i].y, r2x1, r2y1, r2w, r2h)) return true;
+      }
+      return false;
+    }
+    return r1x1 - r1w / 2 < r2x1 + r2w / 2 && r1x1 + r1w / 2 > r2x1 - r2w / 2 &&
+           r1y1 - r1h / 2 < r2y1 + r2h / 2 && r1y1 + r1h / 2 > r2y1 - r2h / 2;
+  }
+  
+  function circleRectOverlap(cx, cy, cr, rx, ry, rw, rh) {
+    var closestX = Math.max(rx - rw / 2, Math.min(cx, rx + rw / 2));
+    var closestY = Math.max(ry - rh / 2, Math.min(cy, ry + rh / 2));
+    var distX = cx - closestX;
+    var distY = cy - closestY;
+    return (distX * distX + distY * distY) < (cr * cr);
+  }
+  
+  function handleCollisions() {
+    for (var i = 0; i < obstacles.length; i++) {
+      var obs = obstacles[i];
+      var collided = false;
+      var collisionNormal = { x: 0, y: 0 };
+      
+      if (obs.type === 'car' || obs.type === 'wall') {
+        var obsW = obs.w || 50;
+        var obsH = obs.h || 30;
+        if (rectanglesOverlap(player.x, player.y, player.length, player.width, obs.x, obs.y, obsW, obsH, obs.angle)) {
+          collided = true;
+          var dx = player.x - obs.x;
+          var dy = player.y - obs.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0) {
+            collisionNormal.x = dx / dist;
+            collisionNormal.y = dy / dist;
+          } else {
+            collisionNormal.x = 1;
+            collisionNormal.y = 0;
+          }
+        }
+      } else if (obs.type === 'building' || obs.type === 'concrete') {
+        if (rectanglesOverlap(player.x, player.y, player.length, player.width, obs.x, obs.y, obs.w, obs.h, 0)) {
+          collided = true;
+          var dx = player.x - obs.x;
+          var dy = player.y - obs.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0) {
+            collisionNormal.x = dx / dist;
+            collisionNormal.y = dy / dist;
+          } else {
+            collisionNormal.x = 1;
+            collisionNormal.y = 0;
+          }
+        }
+      } else if (obs.type === 'barrier' || obs.type === 'edge') {
+        var bw = obs.w || 20;
+        var bh = obs.h || 30;
+        if (rectanglesOverlap(player.x, player.y, player.length, player.width, obs.x, obs.y, bw, bh, 0)) {
+          collided = true;
+          if (obs.w < obs.h) {
+            collisionNormal.x = player.x > obs.x ? 1 : -1;
+            collisionNormal.y = 0;
+          } else {
+            collisionNormal.x = 0;
+            collisionNormal.y = player.y > obs.y ? 1 : -1;
+          }
+        }
+      } else if (obs.type === 'cone') {
+        if (circleRectOverlap(player.x, player.y, 15, obs.x, obs.y, 15, 15)) {
+          collided = true;
+          var dx = player.x - obs.x;
+          var dy = player.y - obs.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0) {
+            collisionNormal.x = dx / dist;
+            collisionNormal.y = dy / dist;
+          }
+        }
+      } else if (obs.type === 'tree') {
+        if (circleRectOverlap(player.x, player.y, 25, obs.x, obs.y, 25, 25)) {
+          collided = true;
+          var dx = player.x - obs.x;
+          var dy = player.y - obs.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0) {
+            collisionNormal.x = dx / dist;
+            collisionNormal.y = dy / dist;
+          }
+        }
+      } else if (obs.type === 'bridge_rail') {
+        if (rectanglesOverlap(player.x, player.y, player.length, player.width, obs.x, obs.y, 10, 150, 0)) {
+          collided = true;
+          collisionNormal.x = player.x > obs.x ? 1 : -1;
+          collisionNormal.y = 0;
+        }
+      } else if (obs.type === 'railing') {
+        if (rectanglesOverlap(player.x, player.y, player.length, player.width, obs.x, obs.y, 3, 250, 0)) {
+          collided = true;
+          collisionNormal.x = player.x > obs.x ? 1 : -1;
+          collisionNormal.y = 0;
+        }
+      } else if (obs.type === 'rock') {
+        if (circleRectOverlap(player.x, player.y, 20, obs.x, obs.y, 30, 20)) {
+          collided = true;
+          var dx = player.x - obs.x;
+          var dy = player.y - obs.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0) {
+            collisionNormal.x = dx / dist;
+            collisionNormal.y = dy / dist;
+          }
+        }
+      } else if (obs.type === 'pillar') {
+        if (circleRectOverlap(player.x, player.y, 15, obs.x, obs.y, 30, 30)) {
+          collided = true;
+          var dx = player.x - obs.x;
+          var dy = player.y - obs.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0) {
+            collisionNormal.x = dx / dist;
+            collisionNormal.y = dy / dist;
+          }
+        }
+      } else if (obs.type === 'light_post') {
+        if (circleRectOverlap(player.x, player.y, 8, obs.x, obs.y, 8, 50)) {
+          collided = true;
+          var dx = player.x - obs.x;
+          var dy = player.y - obs.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0) {
+            collisionNormal.x = dx / dist;
+            collisionNormal.y = dy / dist;
+          }
+        }
+      }
+      
+      if (collided) {
+        var pushStrength = 3;
+        player.x += collisionNormal.x * pushStrength;
+        player.y += collisionNormal.y * pushStrength;
+        
+        player.speed *= 0.5;
+        player.velocityX *= -0.3;
+        player.velocityY *= -0.3;
+        
+        log('Collision with: ' + obs.type);
+      }
+    }
   }
   
   function checkParking() {
