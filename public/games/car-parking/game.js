@@ -368,14 +368,124 @@
   function loadStep4_Audio() {
     log('Step 4: Audio (disabled until gameplay)...');
     
-    // DO NOT initialize audio yet - wait for user interaction
-    // Store audio context for later
     window.gameAudioContext = null;
     window.gameAudioInitialized = false;
+    initAudioSystem();
     
     setTimeout(function() {
       loadStep5_Game();
     }, 100);
+  }
+  
+  // ========================================
+  // AUDIO SYSTEM
+  // ========================================
+  var audioCtx = null;
+  var engineOsc = null;
+  var engineGain = null;
+  var tireOsc = null;
+  var tireGain = null;
+  var lastEngineFreq = 80;
+  var lastEngineVol = 0;
+  var tireVolume = 0;
+  
+  function initAudioSystem() {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      engineGain = audioCtx.createGain();
+      engineGain.gain.value = 0;
+      engineGain.connect(audioCtx.destination);
+      
+      tireGain = audioCtx.createGain();
+      tireGain.gain.value = 0;
+      tireGain.connect(audioCtx.destination);
+    } catch (e) {
+      log('Audio not supported');
+    }
+  }
+  
+  function playEngineSound(speed) {
+    if (!audioCtx || audioCtx.state === 'suspended') return;
+    
+    var absSpeed = Math.abs(speed);
+    var targetFreq = 60 + absSpeed * 25;
+    var targetVol = Math.min(0.15, absSpeed * 0.03);
+    
+    if (Math.abs(speed) < 0.1) {
+      targetFreq = 55;
+      targetVol = 0.08;
+    }
+    
+    if (Math.abs(targetFreq - lastEngineFreq) > 2 || Math.abs(targetVol - lastEngineVol) > 0.01) {
+      try {
+        if (!engineOsc) {
+          engineOsc = audioCtx.createOscillator();
+          engineOsc.type = 'sawtooth';
+          engineOsc.frequency.value = targetFreq;
+          engineOsc.connect(engineGain);
+          engineOsc.start();
+        }
+        
+        engineGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.1);
+        engineOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.08);
+        
+        lastEngineFreq = targetFreq;
+        lastEngineVol = targetVol;
+      } catch (e) {}
+    }
+  }
+  
+  function playTireSound(drifting) {
+    if (!audioCtx) return;
+    
+    var targetTireVol = drifting ? 0.12 : 0;
+    
+    if (Math.abs(targetTireVol - tireVolume) > 0.01) {
+      try {
+        if (!tireOsc) {
+          tireOsc = audioCtx.createOscillator();
+          tireOsc.type = 'square';
+          tireOsc.frequency.value = 200;
+          tireOsc.connect(tireGain);
+          tireOsc.start();
+        }
+        
+        tireGain.gain.setTargetAtTime(targetTireVol, audioCtx.currentTime, 0.05);
+        tireVolume = targetTireVol;
+      } catch (e) {}
+    }
+  }
+  
+  function playCollisionSound() {
+    if (!audioCtx) return;
+    
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      
+      osc.type = 'square';
+      osc.frequency.value = 80;
+      gain.gain.value = 0.2;
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.frequency.setTargetAtTime(40, audioCtx.currentTime + 0.05, 0.02);
+      gain.gain.setTargetAtTime(0, audioCtx.currentTime + 0.1, 0.02);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
+    } catch (e) {}
+  }
+  
+  function stopSounds() {
+    if (engineGain && engineGain.gain) {
+      engineGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2);
+    }
+    if (tireGain && tireGain.gain) {
+      tireGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2);
+    }
   }
   
   function loadStep5_Game() {
@@ -729,6 +839,14 @@ loadPlayerData();
   function cycleCameraMode() {
     camera.mode = (camera.mode + 1) % cameraModes.length;
     log('Camera mode: ' + cameraModes[camera.mode].name);
+  }
+  
+  function adjustColor(hex, amount) {
+    var num = parseInt(hex.replace('#', ''), 16);
+    var r = Math.min(255, Math.max(0, (num >> 16) + amount));
+    var g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
+    var b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
+    return '#' + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
   }
   
   // ========================================
@@ -1290,12 +1408,13 @@ draw();
   var tireTracks = [];
   var maxTireTracks = 40;
   
-  function update(dt) {
+function update(dt) {
     if (game.state === 'countdown') return;
     if (game.state !== 'playing' || game.paused) return;
     
     game.timeLeft -= dt / 1000;
     if (game.timeLeft <= 0) {
+      stopSounds();
       gameOver('Time expired!');
       return;
     }
@@ -1305,8 +1424,6 @@ draw();
     var left = keys['ArrowLeft'] || keys['a'] || keys['A'] || touchLeft;
     var right = keys['ArrowRight'] || keys['d'] || keys['D'] || touchRight;
     var reverse = keys[' '] || touchReverse;
-    
-    applyJoystickInput();
     
     var handbrake = brake && Math.abs(player.speed) > 2;
     
@@ -1348,6 +1465,11 @@ draw();
     player.y += moveY + player.velocityY;
     
     var isDrifting = handbrake || (speedFactor > 0.6 && (left || right));
+    if (audioCtx && audioCtx.state === 'running') {
+      playEngineSound(player.speed);
+      playTireSound(isDrifting);
+    }
+    
     if (isDrifting && Math.abs(player.speed) > 1) {
       tireTracks.push({
         x: player.x - Math.cos(player.angle) * player.length * 0.4,
@@ -1546,6 +1668,7 @@ draw();
         player.velocityY *= -0.3;
         
         log('Collision with: ' + obs.type);
+        playCollisionSound();
       }
     }
   }
@@ -1876,12 +1999,19 @@ draw();
     var length = player.length;
     var width = player.width;
     
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-    ctx.shadowBlur = 15;
-    ctx.shadowOffsetX = 5;
-    ctx.shadowOffsetY = 5;
+    // Shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetX = 8;
+    ctx.shadowOffsetY = 8;
     
-    ctx.fillStyle = model.bodyColor;
+    // Car body with gradient
+    var gradient = ctx.createLinearGradient(-length / 2, 0, length / 2, 0);
+    gradient.addColorStop(0, model.bodyColor);
+    gradient.addColorStop(0.5, adjustColor(model.bodyColor, 20));
+    gradient.addColorStop(1, model.bodyColor);
+    
+    ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.moveTo(length / 2, 0);
     ctx.lineTo(length / 3, -width / 2);
@@ -1895,6 +2025,7 @@ draw();
     
     ctx.shadowColor = 'transparent';
     
+    // Window
     ctx.fillStyle = model.windowColor;
     ctx.beginPath();
     ctx.moveTo(length / 4, -width / 2 + 4);
@@ -1904,9 +2035,17 @@ draw();
     ctx.closePath();
     ctx.fill();
     
-    ctx.fillStyle = 'rgba(135, 206, 235, 0.6)';
-    ctx.fillRect(-length / 4 + 2, -width / 2 + 6, length / 3, width / 2 - 12);
+    // Glass reflection
+    ctx.fillStyle = 'rgba(200, 220, 255, 0.25)';
+    ctx.beginPath();
+    ctx.moveTo(length / 4, -width / 2 + 6);
+    ctx.lineTo(0, -width / 2 + 6);
+    ctx.lineTo(-length / 6, width / 2 - 8);
+    ctx.lineTo(length / 6, width / 2 - 8);
+    ctx.closePath();
+    ctx.fill();
     
+    // Windshield edge
     ctx.fillStyle = model.accentColor;
     ctx.fillRect(-length / 2 + 2, -width / 3, length / 5, width / 1.5);
     
