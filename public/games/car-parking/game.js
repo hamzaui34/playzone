@@ -706,20 +706,60 @@
       var spot = parkingSpots[i];
       if (!spot.target) continue;
       
+      var carWidth = player.width;
+      var carLength = player.length;
+      var halfW = carWidth / 2;
+      var halfL = carLength / 2;
+      
+      var cosA = Math.cos(player.angle);
+      var sinA = Math.sin(player.angle);
+      
+      var corners = [
+        { x: player.x + cosA * halfL - sinA * halfW, y: player.y + sinA * halfL + cosA * halfW },
+        { x: player.x + cosA * halfL + sinA * halfW, y: player.y + sinA * halfL - cosA * halfW },
+        { x: player.x - cosA * halfL - sinA * halfW, y: player.y - sinA * halfL + cosA * halfW },
+        { x: player.x - cosA * halfL + sinA * halfW, y: player.y - sinA * halfL - cosA * halfW }
+      ];
+      
+      var allInside = true;
+      for (var c = 0; c < corners.length; c++) {
+        var cx = corners[c].x;
+        var cy = corners[c].y;
+        var spotLeft = spot.x - spot.width / 2;
+        var spotRight = spot.x + spot.width / 2;
+        var spotTop = spot.y - spot.height / 2;
+        var spotBottom = spot.y + spot.height / 2;
+        
+        if (cx < spotLeft - 5 || cx > spotRight + 5 || cy < spotTop - 5 || cy > spotBottom + 5) {
+          allInside = false;
+          break;
+        }
+      }
+      
+      if (allInside && Math.abs(player.speed) < 0.3) {
+        missionComplete(true);
+        return;
+      }
+      
       var dx = player.x - spot.x;
       var dy = player.y - spot.y;
       var dist = Math.sqrt(dx * dx + dy * dy);
       
-      if (dist < 30 && Math.abs(player.speed) < 0.5) {
-        missionComplete();
+      if (allInside && Math.abs(player.speed) < 0.5) {
+        missionComplete(false);
         return;
       }
     }
   }
   
-  function missionComplete() {
+  function missionComplete(isPerfect) {
     game.state = 'success';
     game.score = Math.floor(game.timeLeft * 20 + 500);
+    
+    var titleEl = document.querySelector('.result-title');
+    if (titleEl) {
+      titleEl.textContent = isPerfect ? 'PERFECT PARK!' : 'PARKED!';
+    }
     
     var scoreEl = document.getElementById('success-score');
     if (scoreEl) scoreEl.textContent = game.score;
