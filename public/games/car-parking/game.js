@@ -552,13 +552,73 @@
     return true;
   }
   
-  loadPlayerData();
-  
+loadPlayerData();
+
   var world = { width: 1200, height: 1000 };
   var obstacles = [];
   var parkingSpots = [];
   var particles = [];
-  var camera = { x: 0, y: 0 };
+  
+  var camera = { 
+    x: 0, 
+    y: 0,
+    targetX: 0,
+    targetY: 0,
+    mode: 0,
+    zoom: 1,
+    targetZoom: 1
+  };
+  
+  var cameraModes = [
+    { name: 'Top-Down', zoom: 1, offsetAngle: 0 },
+    { name: 'Follow', zoom: 0.9, offsetAngle: 0.15 },
+    { name: 'Cinematic', zoom: 1.1, offsetAngle: -0.1 }
+  ];
+  
+  var cameraConfig = {
+    smoothing: 0.08,
+    minZoom: 0.7,
+    maxZoom: 1.4
+  };
+  
+  function updateCamera() {
+    var mode = cameraModes[camera.mode];
+    
+    var targetX = player.x;
+    var targetY = player.y;
+    
+    if (camera.mode === 1) {
+      var followOffset = 100;
+      targetX = player.x - Math.cos(player.angle + Math.PI) * followOffset;
+      targetY = player.y - Math.sin(player.angle + Math.PI) * followOffset;
+    } else if (camera.mode === 2) {
+      var cinematicOffset = 50 + Math.abs(player.speed) * 10;
+      targetX = player.x - Math.cos(player.angle) * cinematicOffset;
+      targetY = player.y - Math.sin(player.angle) * cinematicOffset;
+      camera.targetZoom = 1 + Math.abs(player.speed) * 0.05;
+    } else {
+      camera.targetZoom = 1;
+    }
+    
+    camera.targetZoom = Math.max(cameraConfig.minZoom, Math.min(cameraConfig.maxZoom, camera.targetZoom));
+    camera.targetX = targetX;
+    camera.targetY = targetY;
+    
+    camera.x += (camera.targetX - camera.x) * cameraConfig.smoothing;
+    camera.y += (camera.targetY - camera.y) * cameraConfig.smoothing;
+    camera.zoom += (camera.targetZoom - camera.zoom) * 0.05;
+    
+    var halfW = (W / 2) / camera.zoom;
+    var halfH = (H / 2) / camera.zoom;
+    
+    camera.x = Math.max(halfW, Math.min(world.width - halfW, camera.x));
+    camera.y = Math.max(halfH, Math.min(world.height - halfH, camera.y));
+  }
+  
+  function cycleCameraMode() {
+    camera.mode = (camera.mode + 1) % cameraModes.length;
+    log('Camera mode: ' + cameraModes[camera.mode].name);
+  }
   
   // ========================================
   // GAME LOGIC
@@ -634,6 +694,12 @@
         }
       };
     }
+    
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'c' || e.key === 'C') {
+        cycleCameraMode();
+      }
+    });
     
     if (menuBtn) {
       menuBtn.onclick = function() {
@@ -1167,8 +1233,7 @@
     player.x = Math.max(25, Math.min(world.width - 25, player.x));
     player.y = Math.max(25, Math.min(world.height - 25, player.y));
     
-    camera.x += (player.x - W / 2 - camera.x) * 0.08;
-    camera.y += (player.y - H / 2 - camera.y) * 0.08;
+    updateCamera();
     
     checkParking();
     updateMissionUI();
@@ -1454,6 +1519,9 @@
     if (game.state !== 'playing' && game.state !== 'success' && game.state !== 'fail') return;
     
     ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(camera.zoom, camera.zoom);
+    ctx.translate(-W / 2, -H / 2);
     ctx.translate(-camera.x, -camera.y);
     
     drawWorld();
