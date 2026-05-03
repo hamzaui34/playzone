@@ -29,6 +29,10 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
       <body className="min-h-screen flex flex-col bg-[#0B0C10] text-white">
         <TopNav />
         <main className="flex-1 pb-20 pt-4 px-4 max-w-7xl mx-auto w-full">

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a2a3a"/>
+      <stop offset="100%" style="stop-color:#2a4a5a"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#333"/>
+      <stop offset="100%" style="stop-color:#222"/>
+    </linearGradient>
+    <linearGradient id="car" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a9eff"/>
+      <stop offset="100%" style="stop-color:#2266cc"/>
+    </linearGradient>
+  </defs>
+  
+  <rect width="400" height="300" fill="url(#sky)"/>
+  
+  <rect x="50" y="180" width="300" height="80" fill="url(#road)"/>
+  <line x1="50" y1="220" x2="350" y2="220" stroke="#ffcc00" stroke-width="4" stroke-dasharray="20,10"/>
+  
+  <rect x="280" y="190" width="60" height="35" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="8,4"/>
+  <rect x="280" y="190" width="60" height="35" fill="rgba(0,255,0,0.2)" stroke="#00ff00" stroke-width="3"/>
+  
+  <rect x="170" y="150" width="70" height="35" rx="5" fill="url(#car)"/>
+  <rect x="170" y="150" width="70" height="12" fill="#333"/>
+  <rect x="180" y="155" width="25" height="8" fill="#88ccff"/>
+  <rect x="215" y="155" width="20" height="8" fill="#88ccff"/>
+  <rect x="173" y="183" width="8" height="4" fill="#222"/>
+  <rect x="229" y="183" width="8" height="4" fill="#222"/>
+  <rect x="173" y="150" width="8" height="4" fill="#222"/>
+  <rect x="229" y="150" width="8" height="4" fill="#222"/>
+  <circle cx="185" cy="190" r="3" fill="#ff0000"/>
+  <circle cx="225" cy="190" r="3" fill="#ff0000"/>
+  
+  <rect x="60" y="120" width="40" height="50" fill="#555"/>
+  <rect x="60" y="100" width="50" height="30" fill="#665544"/>
+  <polygon points="60,100 85,70 110,100" fill="#443322"/>
+  
+  <rect x="300" y="100" width="30" height="80" fill="#444"/>
+  <circle cx="315" cy="90" r="8" fill="#ffffaa" opacity="0.8"/>
+  
+  <text x="200" y="270" text-anchor="middle" fill="white" font-family="Arial" font-size="20" font-weight="bold">CAR PARKING</text>
+  <text x="200" y="290" text-anchor="middle" fill="#4a9eff" font-family="Arial" font-size="14">SIMULATOR</text>
+</svg>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Stickman Battle Arena - PlayZone</title>
     <link href="https://fonts.googleapis.com/css2?family=Russo+One:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -10,23 +10,26 @@
         
         body {
             background: linear-gradient(135deg, #1a0a0a 0%, #2d1b1b 50%, #1a0a0a 100%);
-            min-height: 100vh;
+            width: 100vw;
+            height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: 'Russo One', sans-serif;
             overflow: hidden;
+            margin: 0;
+            padding: 0;
+            position: fixed;
+            touch-action: none;
         }
         
         #gameContainer {
-            position: relative;
-            width: 100%;
-            max-width: 900px;
-            aspect-ratio: 16/9;
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
             background: linear-gradient(180deg, #0a0505 0%, #1a0a0a 100%);
-            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 0 60px rgba(255, 50, 50, 0.2), 0 20px 60px rgba(0, 0, 0, 0.5);
         }
         
         #gameCanvas { width: 100%; height: 100%; display: block; }
@@ -304,9 +307,8 @@
         const ctx = canvas.getContext('2d');
         
         function resizeCanvas() {
-            const container = document.getElementById('gameContainer');
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);

@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Share2, Maximize2, Minimize2, Gamepad2, Trophy } from 'lucide-react';
+import { ArrowLeft, Maximize2, Minimize2, Gamepad2, Trophy, RefreshCw } from 'lucide-react';
 import { getGameBySlug, getCoinsForGame } from '@/lib/gameData';
 import { 
   saveLastPlayed, 
@@ -20,11 +20,15 @@ export default function GamePage({ params }) {
   const router = useRouter();
   const iframeRef = useRef(null);
   const containerRef = useRef(null);
+  const canvasCheckRef = useRef(null);
   
   const game = useMemo(() => getGameBySlug(slug), [slug]);
   const coinsPerWin = useMemo(() => getCoinsForGame(slug), [slug]);
   
   const [loading, setLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentScore, setCurrentScore] = useState(0);
   const [challenge, setChallenge] = useState(() => getChallengeMessage(slug, 0));
@@ -35,8 +39,20 @@ export default function GamePage({ params }) {
   const coinsReward = useMemo(() => coinsPerWin, [coinsPerWin]);
 
   useEffect(() => {
+    const checkMobile = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+        ('ontouchstart' in window) ||
+        (navigator.maxTouchPoints > 0);
+      setIsMobile(mobile);
+      console.log('[GameLoader] Device detected:', mobile ? 'MOBILE' : 'DESKTOP');
+    };
+    checkMobile();
+  }, []);
+
+  useEffect(() => {
     if (slug && game) {
       saveLastPlayed(slug, { title: game.title });
+      console.log('[GameLoader] Game selected:', game.title, game.gameUrl);
     }
   }, [slug, game]);
 
@@ -55,9 +71,13 @@ export default function GamePage({ params }) {
   }, []);
 
   const handleGameMessage = useCallback((event) => {
+    console.log('[GameLoader] Message received:', event.data);
+    
     if (!event.data) return;
     
     if (event.data.type === 'gameReady') {
+      console.log('[GameLoader] ✅ gameReady received, game is ready!');
+      setIsReady(true);
       setLoading(false);
     }
     
@@ -72,7 +92,6 @@ export default function GamePage({ params }) {
       if (isNew) {
         setShowNewRecord(true);
         addCoins(coinsReward);
-        
         setTimeout(() => setShowNewRecord(false), 3000);
       }
     }
@@ -80,15 +99,63 @@ export default function GamePage({ params }) {
 
   useEffect(() => {
     window.addEventListener('message', handleGameMessage);
+    console.log('[GameLoader] Message listener registered');
     return () => window.removeEventListener('message', handleGameMessage);
   }, [handleGameMessage]);
 
-  useEffect(() => {
-    if (loading && game?.hasFullGame) {
-      const timer = setTimeout(() => setLoading(false), 2000);
-      return () => clearTimeout(timer);
+  const handleRetry = useCallback(() => {
+    console.log('[GameLoader] Retrying game load...');
+    setLoadingError(false);
+    setLoading(true);
+    setIsReady(false);
+    
+    if (iframeRef.current) {
+      const currentSrc = iframeRef.current.src;
+      iframeRef.current.src = '';
+      setTimeout(() => {
+        if (iframeRef.current) {
+          iframeRef.current.src = currentSrc;
+        }
+      }, 100);
     }
-  }, [loading, game?.hasFullGame]);
+  }, []);
+
+  const handleIframeLoad = useCallback(() => {
+    console.log('[GameLoader] ✅ Iframe onLoad fired');
+    
+    if (isMobile) {
+      console.log('[GameLoader] Mobile: Checking for canvas...');
+    }
+    
+    setLoading(false);
+    setIsReady(true);
+  }, [isMobile]);
+
+  const handleIframeError = useCallback(() => {
+    console.error('[GameLoader] ❌ Iframe failed to load');
+    setLoadingError(true);
+  }, []);
+
+  useEffect(() => {
+    if (!loading || !game?.hasFullGame) return;
+    
+    console.log('[GameLoader] Loading started, setting timeout...');
+    
+    const timeout = setTimeout(() => {
+      console.log('[GameLoader] Timeout reached, checking state...');
+      
+      if (isReady) {
+        console.log('[GameLoader] Game already ready, ignoring timeout');
+        return;
+      }
+      
+      console.log('[GameLoader] Timeout! Showing retry button');
+      setLoadingError(true);
+      setLoading(false);
+    }, 10000);
+    
+    return () => clearTimeout(timeout);
+  }, [loading, game?.hasFullGame, isReady]);
 
   const toggleFullscreen = async () => {
     if (!containerRef.current) return;
@@ -110,7 +177,7 @@ export default function GamePage({ params }) {
         setIsFullscreen(false);
       }
     } catch (err) {
-      console.log('Fullscreen not supported');
+      console.log('[GameLoader] Fullscreen error:', err);
     }
   };
 
@@ -207,27 +274,49 @@ export default function GamePage({ params }) {
 
       <div 
         ref={containerRef}
-        className={`relative rounded-2xl overflow-hidden glass-panel bg-black ${isFullscreen ? 'fixed inset-0 z-[9999] rounded-none' : ''}`}
+        className={`relative rounded-2xl overflow-hidden glass-panel bg-black transition-all duration-500 ${
+          isFullscreen 
+            ? 'fixed inset-0 z-[9999] rounded-none w-screen h-screen' 
+            : 'w-full aspect-[4/3] md:aspect-video lg:aspect-[16/9]'
+        }`}
       >
         {game.hasFullGame ? (
           <>
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-[#0B0C10]/90 z-10">
+            {(loading || loadingError) && (
+              <div className="absolute inset-0 flex items-center justify-center bg-[#0B0C10]/95 z-10">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-12 h-12 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-cyan-400 font-semibold">Loading {game.title}...</p>
+                  {loadingError ? (
+                    <>
+                      <p className="text-red-400 font-semibold">Game failed to load</p>
+                      <button
+                        onClick={handleRetry}
+                        className="flex items-center gap-2 px-6 py-3 bg-cyan-500 text-white font-bold rounded-full hover:bg-cyan-400 transition-all"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Retry Game
+                      </button>
+                      {isMobile && <p className="text-gray-400 text-xs">Check internet connection</p>}
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-cyan-400 font-semibold">Loading {game.title}...</p>
+                      <p className="text-gray-500 text-xs">Tap Play in the game when ready</p>
+                    </>
+                  )}
                 </div>
               </div>
             )}
             <iframe
               ref={iframeRef}
               src={game.gameUrl}
-              className={`w-full ${isFullscreen ? 'h-screen' : 'aspect-[4/3]'}`}
+              className="w-full h-full border-0"
               title={game.title}
-              allow="autoplay; fullscreen"
+              allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
-              onLoad={() => setLoading(false)}
-              sandbox="allow-scripts allow-same-origin allow-forms"
+              onLoad={handleIframeLoad}
+              onError={handleIframeError}
+              sandbox="allow-scripts allow-same-origin"
             />
           </>
         ) : (

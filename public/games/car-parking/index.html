@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f0f1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Car Parking Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <div id="game-wrapper">
+      <div id="canvas-wrapper">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="gameplay-ui" class="hidden">
+          <div class="mission-name-box">
+            <span id="mission-name">MISSION</span>
+          </div>
+          <div class="timer-box">
+            <span id="mission-timer">60</span>
+          </div>
+          <div class="ui-top">
+            <button class="pause-btn">⏸</button>
+          </div>
+        </div>
+
+        <div class="controls-area">
+          <div class="steer-controls">
+            <button class="steer-btn" id="steer-left">◀</button>
+            <button class="steer-btn" id="steer-right">▶</button>
+          </div>
+          <div class="pedal-controls">
+            <div class="pedal-row">
+              <button class="pedal-btn" id="brake-btn">BRAKE</button>
+              <button class="pedal-btn" id="accelerate-btn">GAS</button>
+            </div>
+            <button class="pedal-btn" id="reverse-btn">R</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- START SCREEN - Always shown first, game won't load until user taps PLAY -->
+    <div id="start-screen" class="overlay">
+      <div class="overlay-content">
+        <div class="game-logo">
+          <div class="game-icon">🚗</div>
+          <h1 class="game-title">CAR PARKING</h1>
+          <div class="game-subtitle">SIMULATOR</div>
+        </div>
+        <p class="game-description" style="color: rgba(255,255,255,0.6); margin: 20px 0;">Master the art of parking!</p>
+        <button class="btn btn-primary" id="start-play-btn">
+          <span>▶</span> PLAY
+        </button>
+        <button class="btn btn-secondary" id="start-how-btn" style="margin-top: 15px;">
+          How to Play
+        </button>
+      </div>
+    </div>
+
+    <!-- HOW TO PLAY -->
+    <div id="how-to-play" class="overlay hidden">
+      <div class="overlay-content">
+        <h2 style="color: white; font-size: 22px; margin-bottom: 20px;">HOW TO PLAY</h2>
+        <div style="text-align: left; color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.8;">
+          <p><strong style="color: white;">🎮 Controls</strong></p>
+          <p>• Tap GAS to accelerate</p>
+          <p>• Tap BRAKE to slow down</p>
+          <p>• Tap ◀ ▶ to steer</p>
+          <p>• Tap R to reverse</p>
+          <br>
+          <p><strong style="color: white;">🎯 Goal</strong></p>
+          <p>• Park in the green zone</p>
+          <p>• Park before time runs out</p>
+          <p>• Don't crash into cars!</p>
+        </div>
+        <button class="btn btn-primary" id="how-play-btn" style="margin-top: 25px;">
+          GOT IT!
+        </button>
+      </div>
+    </div>
+
+    <!-- MENU SCREEN - Shown after starting -->
+    <div id="menu-screen" class="overlay hidden">
+      <div class="overlay-content">
+        <div class="game-logo">
+          <div class="game-icon">🚗</div>
+          <h1 class="game-title">CAR PARKING</h1>
+          <div class="game-subtitle">SIMULATOR</div>
+        </div>
+        <div class="high-score-display">
+          <span class="high-score-label">Best Score</span>
+          <span class="high-score-value" id="high-score">0</span>
+        </div>
+        <button class="btn btn-primary" id="play-btn">
+          <span>▶</span> PLAY
+        </button>
+      </div>
+    </div>
+
+    <div id="mission-select" class="overlay hidden">
+      <div class="overlay-content">
+        <h2 style="color: white; font-size: 24px; margin-bottom: 20px;">SELECT MISSION</h2>
+        <div class="missions-grid" id="missions-list"></div>
+        <div class="back-btn">← Back to Menu</div>
+      </div>
+    </div>
+
+    <div id="pause-screen" class="overlay hidden">
+      <div class="overlay-content pause-menu">
+        <h2 class="pause-title">⏸ PAUSED</h2>
+        <button class="btn btn-primary" id="resume-btn">RESUME</button>
+        <button class="btn btn-secondary" id="restart-btn">RESTART</button>
+        <button class="btn btn-secondary menu-btn">MENU</button>
+      </div>
+    </div>
+
+    <div id="success-screen" class="overlay hidden">
+      <div class="overlay-content result-screen success">
+        <div class="result-icon">🎉</div>
+        <div class="result-title">PARKED!</div>
+        <div class="result-score" id="success-score">0</div>
+        <div class="result-stars" id="success-stars">⭐⭐⭐</div>
+        <div class="result-buttons">
+          <button class="btn btn-primary" id="next-mission-btn">NEXT MISSION</button>
+          <button class="btn btn-secondary mission-select-btn">MISSIONS</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="fail-screen" class="overlay hidden">
+      <div class="overlay-content result-screen fail">
+        <div class="result-icon">💥</div>
+        <div class="result-title">FAILED</div>
+        <p style="color: rgba(255,255,255,0.7); font-size: 16px;" id="fail-reason">Crashed!</p>
+        <div class="result-buttons">
+          <button class="btn btn-danger" id="retry-btn">TRY AGAIN</button>
+          <button class="btn btn-secondary mission-select-btn">MISSIONS</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

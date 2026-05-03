@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Zombie Defense - PlayZone</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
@@ -16,24 +16,27 @@
         
         body {
             background: linear-gradient(135deg, #1a0a0a 0%, #2d1b1b 50%, #1a0a0a 100%);
-            min-height: 100vh;
+            width: 100vw;
+            height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             font-family: 'Orbitron', monospace;
             overflow: hidden;
+            margin: 0;
+            padding: 0;
+            position: fixed;
+            touch-action: none;
         }
         
         #gameContainer {
-            position: relative;
-            width: 100%;
-            max-width: 800px;
-            aspect-ratio: 16/9;
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
             background: linear-gradient(180deg, #0a0505 0%, #1a0a0a 100%);
-            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 0 40px rgba(255, 0, 0, 0.3), inset 0 0 60px rgba(0, 0, 0, 0.5);
         }
         
         #gameCanvas {
@@ -272,9 +275,8 @@
         const ctx = canvas.getContext('2d');
         
         function resizeCanvas() {
-            const container = document.getElementById('gameContainer');
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
