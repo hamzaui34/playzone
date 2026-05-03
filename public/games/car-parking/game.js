@@ -54,17 +54,18 @@
   // ========================================
   let touchLeft = false, touchRight = false;
   let touchGas = false, touchBrake = false, touchReverse = false;
+  let joystickX = 0, joystickY = 0, joystickActive = false;
   
   function initTouchControls() {
     log('Initializing touch controls...');
     
+    // Button controls
     const btnIds = ['steer-left', 'steer-right', 'accelerate-btn', 'brake-btn', 'reverse-btn'];
     
     btnIds.forEach(function(id) {
       const btn = document.getElementById(id);
       if (!btn) return;
       
-      // Touch events
       btn.addEventListener('touchstart', function(e) {
         e.preventDefault();
         updateTouchState(id, true);
@@ -75,7 +76,6 @@
         updateTouchState(id, false);
       }, { passive: false });
       
-      // Mouse events for desktop testing
       btn.addEventListener('mousedown', function() {
         updateTouchState(id, true);
       });
@@ -89,7 +89,117 @@
       });
     });
     
+    // Mobile joystick
+    initMobileJoystick();
+    
+    // Mobile buttons
+    initMobileButtons();
+    
     log('Touch controls ready');
+  }
+  
+  function initMobileJoystick() {
+    var joystickArea = document.getElementById('joystick-area');
+    var joystickBase = document.getElementById('joystick-base');
+    var joystickThumb = document.getElementById('joystick-thumb');
+    
+    if (!joystickArea || !joystickBase || !joystickThumb) return;
+    
+    var maxDist = 40;
+    var centerX, centerY;
+    
+    function updateJoystickPosition(clientX, clientY) {
+      var rect = joystickBase.getBoundingClientRect();
+      centerX = rect.left + rect.width / 2;
+      centerY = rect.top + rect.height / 2;
+      
+      var dx = clientX - centerX;
+      var dy = clientY - centerY;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist > maxDist) {
+        dx = (dx / dist) * maxDist;
+        dy = (dy / dist) * maxDist;
+      }
+      
+      joystickThumb.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+      
+      joystickX = dx / maxDist;
+      joystickY = dy / maxDist;
+    }
+    
+    function resetJoystick() {
+      joystickThumb.style.transform = 'translate(0, 0)';
+      joystickX = 0;
+      joystickY = 0;
+      joystickActive = false;
+      touchLeft = false;
+      touchRight = false;
+    }
+    
+    joystickArea.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      joystickActive = true;
+      var touch = e.touches[0];
+      updateJoystickPosition(touch.clientX, touch.clientY);
+    }, { passive: false });
+    
+    joystickArea.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      if (!joystickActive) return;
+      var touch = e.touches[0];
+      updateJoystickPosition(touch.clientX, touch.clientY);
+    }, { passive: false });
+    
+    joystickArea.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      resetJoystick();
+    }, { passive: false });
+    
+    joystickArea.addEventListener('touchcancel', function(e) {
+      resetJoystick();
+    });
+  }
+  
+  function initMobileButtons() {
+    var gasBtn = document.getElementById('mobile-gas');
+    var brakeBtn = document.getElementById('mobile-brake');
+    var reverseBtn = document.getElementById('mobile-reverse');
+    
+    [gasBtn, brakeBtn, reverseBtn].forEach(function(btn) {
+      if (!btn) return;
+      
+      btn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        btn.classList.add('pressed');
+        if (btn === gasBtn) touchGas = true;
+        if (btn === brakeBtn) touchBrake = true;
+        if (btn === reverseBtn) touchReverse = true;
+      }, { passive: false });
+      
+      btn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        btn.classList.remove('pressed');
+        if (btn === gasBtn) touchGas = false;
+        if (btn === brakeBtn) touchBrake = false;
+        if (btn === reverseBtn) touchReverse = false;
+      }, { passive: false });
+    });
+  }
+  
+  function applyJoystickInput() {
+    if (Math.abs(joystickX) > 0.3) {
+      if (joystickX < 0) {
+        touchLeft = true;
+        touchRight = false;
+      } else {
+        touchLeft = false;
+        touchRight = true;
+      }
+    } else {
+      touchLeft = false;
+      touchRight = false;
+    }
   }
   
   function updateTouchState(id, pressed) {
@@ -1195,6 +1305,8 @@ draw();
     var left = keys['ArrowLeft'] || keys['a'] || keys['A'] || touchLeft;
     var right = keys['ArrowRight'] || keys['d'] || keys['D'] || touchRight;
     var reverse = keys[' '] || touchReverse;
+    
+    applyJoystickInput();
     
     var handbrake = brake && Math.abs(player.speed) > 2;
     

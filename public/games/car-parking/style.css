@@ -577,6 +577,125 @@ html, body {
   #reverse-btn { width: 50px; height: 50px; }
 }
 
+/* Mobile Controls */
+.mobile-controls {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .mobile-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 15px 20px;
+    pointer-events: none;
+    z-index: 50;
+  }
+  
+  .joystick-area {
+    width: 120px;
+    height: 120px;
+    pointer-events: auto;
+  }
+  
+  .joystick-base {
+    width: 100px;
+    height: 100px;
+    background: rgba(255,255,255,0.15);
+    border: 3px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .joystick-thumb {
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.5);
+    border: 2px solid rgba(255,255,255,0.8);
+    border-radius: 50%;
+    transition: transform 0.05s ease-out;
+  }
+  
+  .pedal-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: auto;
+  }
+  
+  .mobile-btn {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: 3px solid;
+    background: rgba(255,255,255,0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.1s ease;
+  }
+  
+  .mobile-btn .btn-icon {
+    font-size: 20px;
+  }
+  
+  .mobile-btn .btn-label {
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+    margin-top: 2px;
+  }
+  
+  .gas-btn {
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+  
+  .gas-btn:active, .gas-btn.pressed {
+    background: #22c55e;
+    color: white;
+    transform: scale(0.95);
+  }
+  
+  .brake-btn {
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+  
+  .brake-btn:active, .brake-btn.pressed {
+    background: #ef4444;
+    color: white;
+    transform: scale(0.95);
+  }
+  
+  .reverse-btn {
+    border-color: #eab308;
+    color: #eab308;
+    width: 55px;
+    height: 55px;
+  }
+  
+  .reverse-btn:active, .reverse-btn.pressed {
+    background: #eab308;
+    color: black;
+    transform: scale(0.95);
+  }
+  
+  .pedal-row {
+    display: flex;
+    gap: 10px;
+  }
+}
+
 @media (orientation: landscape) and (max-height: 500px) {
   .controls-area { height: 80%; }
   .pedal-btn { width: 55px; height: 55px; }

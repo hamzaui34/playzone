@@ -27,23 +27,35 @@
           </div>
         </div>
 
-        <div class="controls-area">
-          <div class="steer-controls">
-            <button class="steer-btn" id="steer-left">◀</button>
-            <button class="steer-btn" id="steer-right">▶</button>
-          </div>
-          <div class="pedal-controls">
-            <div class="pedal-row">
-              <button class="pedal-btn" id="brake-btn">BRAKE</button>
-              <button class="pedal-btn" id="accelerate-btn">GAS</button>
+        <!-- Mobile Controls -->
+        <div class="mobile-controls">
+          <!-- Virtual Joystick -->
+          <div class="joystick-area" id="joystick-area">
+            <div class="joystick-base" id="joystick-base">
+              <div class="joystick-thumb" id="joystick-thumb"></div>
             </div>
-            <button class="pedal-btn" id="reverse-btn">R</button>
+          </div>
+          
+          <!-- Pedal Buttons -->
+          <div class="pedal-area">
+            <button class="mobile-btn brake-btn" id="mobile-brake">
+              <span class="btn-icon">🛑</span>
+              <span class="btn-label">BRAKE</span>
+            </button>
+            <button class="mobile-btn gas-btn" id="mobile-gas">
+              <span class="btn-icon">🚀</span>
+              <span class="btn-label">GAS</span>
+            </button>
+            <button class="mobile-btn reverse-btn" id="mobile-reverse">
+              <span class="btn-icon">🔄</span>
+              <span class="btn-label">R</span>
+            </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- START SCREEN - Always shown first, game won't load until user taps PLAY -->
+    <!-- START SCREEN -->
     <div id="start-screen" class="overlay">
       <div class="overlay-content">
         <div class="game-logo">
@@ -66,16 +78,19 @@
       <div class="overlay-content">
         <h2 style="color: white; font-size: 22px; margin-bottom: 20px;">HOW TO PLAY</h2>
         <div style="text-align: left; color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.8;">
-          <p><strong style="color: white;">🎮 Controls</strong></p>
-          <p>• Tap GAS to accelerate</p>
-          <p>• Tap BRAKE to slow down</p>
-          <p>• Tap ◀ ▶ to steer</p>
-          <p>• Tap R to reverse</p>
+          <p><strong style="color: white;">🎮 Mobile Controls</strong></p>
+          <p>• Left joystick = Steer</p>
+          <p>• GAS button = Accelerate</p>
+          <p>• BRAKE button = Brake (hold for handbrake)</p>
+          <p>• R button = Reverse</p>
+          <br>
+          <p><strong style="color: white;">🎮 Keyboard</strong></p>
+          <p>• WASD or Arrows = Steering</p>
+          <p>• Space = Reverse</p>
           <br>
           <p><strong style="color: white;">🎯 Goal</strong></p>
           <p>• Park in the green zone</p>
-          <p>• Park before time runs out</p>
-          <p>• Don't crash into cars!</p>
+          <p>• Don't hit other cars!</p>
         </div>
         <button class="btn btn-primary" id="how-play-btn" style="margin-top: 25px;">
           GOT IT!
@@ -83,7 +98,7 @@
       </div>
     </div>
 
-    <!-- MENU SCREEN - Shown after starting -->
+    <!-- MENU SCREEN -->
     <div id="menu-screen" class="overlay hidden">
       <div class="overlay-content">
         <div class="game-logo">
