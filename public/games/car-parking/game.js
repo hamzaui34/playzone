@@ -416,7 +416,8 @@
     turnSpeed: 0.035,
     driftFactor: 0.92,
     velocityX: 0,
-    velocityY: 0
+    velocityY: 0,
+    traction: 1
   };
   
   var carModels = [
@@ -1172,9 +1173,12 @@ loadPlayerData();
       update(Math.min(dt, 32));
     }
     
-    draw();
+draw();
     requestAnimationFrame(gameLoop);
   }
+
+  var tireTracks = [];
+  var maxTireTracks = 40;
   
   function update(dt) {
     if (game.state === 'countdown') return;
@@ -1192,41 +1196,63 @@ loadPlayerData();
     var right = keys['ArrowRight'] || keys['d'] || keys['D'] || touchRight;
     var reverse = keys[' '] || touchReverse;
     
-    var targetSpeed = 0;
-    if (gas) targetSpeed = player.maxSpeed;
-    else if (brake) targetSpeed = -player.maxSpeed * 0.5;
-    else if (reverse) targetSpeed = -player.maxSpeed * 0.3;
+    var handbrake = brake && Math.abs(player.speed) > 2;
+    
+    var speedFactor = Math.abs(player.speed) / player.maxSpeed;
+    player.traction = 1 - (speedFactor * 0.6);
+    if (handbrake) player.traction = 0.3;
     
     if (gas) {
-      player.speed += player.acceleration;
+      player.speed += player.acceleration * player.traction;
     } else if (brake) {
-      player.speed -= player.brakeForce;
+      player.speed -= (handbrake ? player.brakeForce * 1.5 : player.brakeForce);
     } else {
       player.speed *= player.friction;
     }
     
-    player.speed = Math.max(-player.maxSpeed * 0.5, Math.min(player.maxSpeed, player.speed));
+    var turnGrip = player.traction * 0.7;
+    var turnAmount = player.turnSpeed * (0.3 + speedFactor * 0.7) * turnGrip;
     
-    var speedFactor = Math.abs(player.speed) / player.maxSpeed;
-    var turnAmount = player.turnSpeed * (0.5 + speedFactor * 0.5);
+    if (handbrake) {
+      turnAmount *= 2.2;
+    }
     
-    if (Math.abs(player.speed) > 0.1) {
+    if (Math.abs(player.speed) > 0.15) {
       var turnDir = player.speed > 0 ? 1 : -1;
       if (left) player.angle -= turnAmount * turnDir;
       if (right) player.angle += turnAmount * turnDir;
     }
     
-    var moveAngle = player.angle;
-    if (Math.abs(player.speed) > 2 && (left || right)) {
-      var driftAngle = (left ? -1 : 1) * 0.1 * speedFactor;
-      moveAngle += driftAngle;
+    var grip = player.traction;
+    if (handbrake) grip = 0.4;
+    
+    player.velocityX = player.velocityX * 0.92 + Math.cos(player.angle) * player.speed * (1 - grip) * 0.08;
+    player.velocityY = player.velocityY * 0.92 + Math.sin(player.angle) * player.speed * (1 - grip) * 0.08;
+    
+    var moveX = Math.cos(player.angle) * player.speed * grip;
+    var moveY = Math.sin(player.angle) * player.speed * grip;
+    
+    player.x += moveX + player.velocityX;
+    player.y += moveY + player.velocityY;
+    
+    var isDrifting = handbrake || (speedFactor > 0.6 && (left || right));
+    if (isDrifting && Math.abs(player.speed) > 1) {
+      tireTracks.push({
+        x: player.x - Math.cos(player.angle) * player.length * 0.4,
+        y: player.y - Math.sin(player.angle) * player.length * 0.4,
+        alpha: Math.min(0.5, speedFactor)
+      });
+      tireTracks.push({
+        x: player.x - Math.cos(player.angle) * player.length * 0.4 + Math.sin(player.angle) * player.width * 0.3,
+        y: player.y - Math.sin(player.angle) * player.length * 0.4 - Math.cos(player.angle) * player.width * 0.3,
+        alpha: Math.min(0.5, speedFactor)
+      });
+      
+      if (tireTracks.length > maxTireTracks) {
+        tireTracks.shift();
+        tireTracks.shift();
+      }
     }
-    
-    player.velocityX = Math.cos(moveAngle) * player.speed;
-    player.velocityY = Math.sin(moveAngle) * player.speed;
-    
-    player.x += player.velocityX;
-    player.y += player.velocityY;
     
     handleCollisions();
     
@@ -1525,9 +1551,31 @@ loadPlayerData();
     ctx.translate(-camera.x, -camera.y);
     
     drawWorld();
+    drawTireTracks();
     drawCar(player.x, player.y, player.angle, '#3388ff');
     
     ctx.restore();
+  }
+  
+  function drawTireTracks() {
+    for (var i = 0; i < tireTracks.length; i++) {
+      var track = tireTracks[i];
+      ctx.fillStyle = 'rgba(40, 40, 40, ' + track.alpha + ')';
+      ctx.beginPath();
+      ctx.arc(track.x, track.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+      track.alpha *= 0.98;
+    }
+    
+    var writeIdx = [];
+    for (var j = 0; j < tireTracks.length; j++) {
+      if (tireTracks[j].alpha < 0.02) {
+        writeIdx.push(j);
+      }
+    }
+    for (var k = writeIdx.length - 1; k >= 0; k--) {
+      tireTracks.splice(writeIdx[k], 1);
+    }
   }
   
   function drawWorld() {
