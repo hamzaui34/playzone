@@ -366,8 +366,23 @@
     angle: -Math.PI / 2,
     speed: 0,
     width: 30,
-    length: 50
+    length: 50,
+    model: 0,
+    maxSpeed: 6,
+    acceleration: 0.12,
+    brakeForce: 0.25,
+    friction: 0.97,
+    turnSpeed: 0.035,
+    driftFactor: 0.92,
+    velocityX: 0,
+    velocityY: 0
   };
+  
+  var carModels = [
+    { name: 'Sport', bodyColor: '#2563eb', accentColor: '#1e40af', windowColor: '#1e3a5f' },
+    { name: 'Luxury', bodyColor: '#1f2937', accentColor: '#374151', windowColor: '#0f172a' },
+    { name: 'Classic', bodyColor: '#991b1b', accentColor: '#7f1d1d', windowColor: '#450a0a' }
+  ];
   
   var world = { width: 1200, height: 1000 };
   var obstacles = [];
@@ -488,7 +503,24 @@
     var container = document.getElementById('missions-list');
     if (!container) return;
     
+    var carSelect = document.createElement('div');
+    carSelect.style.cssText = 'margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px;';
+    carSelect.innerHTML = '<div style="color: white; font-weight: bold; margin-bottom: 10px;">Select Car:</div>';
+    
+    carModels.forEach(function(cm, idx) {
+      var btn = document.createElement('button');
+      btn.style.cssText = 'margin: 5px; padding: 10px 20px; background: ' + (idx === player.model ? '#2563eb' : 'rgba(255,255,255,0.2)') + '; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;';
+      btn.textContent = cm.name;
+      btn.onclick = function() {
+        player.model = idx;
+        showMissionButtons();
+      };
+      carSelect.appendChild(btn);
+    });
+    
+    container.appendChild(carSelect);
     container.innerHTML = '';
+    container.appendChild(carSelect);
     
     missions.forEach(function(m) {
       var btn = document.createElement('div');
@@ -522,6 +554,8 @@
     player.y = 600;
     player.angle = -Math.PI / 2;
     player.speed = 0;
+    player.velocityX = 0;
+    player.velocityY = 0;
     
     camera.x = 0;
     camera.y = 0;
@@ -676,20 +710,41 @@
     var right = keys['ArrowRight'] || keys['d'] || keys['D'] || touchRight;
     var reverse = keys[' '] || touchReverse;
     
-    if (gas) player.speed += 0.15;
-    else if (brake) player.speed -= 0.2;
-    else player.speed *= 0.95;
+    var targetSpeed = 0;
+    if (gas) targetSpeed = player.maxSpeed;
+    else if (brake) targetSpeed = -player.maxSpeed * 0.5;
+    else if (reverse) targetSpeed = -player.maxSpeed * 0.3;
     
-    player.speed = Math.max(-3, Math.min(5, player.speed));
+    if (gas) {
+      player.speed += player.acceleration;
+    } else if (brake) {
+      player.speed -= player.brakeForce;
+    } else {
+      player.speed *= player.friction;
+    }
+    
+    player.speed = Math.max(-player.maxSpeed * 0.5, Math.min(player.maxSpeed, player.speed));
+    
+    var speedFactor = Math.abs(player.speed) / player.maxSpeed;
+    var turnAmount = player.turnSpeed * (0.5 + speedFactor * 0.5);
     
     if (Math.abs(player.speed) > 0.1) {
       var turnDir = player.speed > 0 ? 1 : -1;
-      if (left) player.angle -= 0.04 * turnDir;
-      if (right) player.angle += 0.04 * turnDir;
+      if (left) player.angle -= turnAmount * turnDir;
+      if (right) player.angle += turnAmount * turnDir;
     }
     
-    player.x += Math.cos(player.angle) * player.speed;
-    player.y += Math.sin(player.angle) * player.speed;
+    var moveAngle = player.angle;
+    if (Math.abs(player.speed) > 2 && (left || right)) {
+      var driftAngle = (left ? -1 : 1) * 0.1 * speedFactor;
+      moveAngle += driftAngle;
+    }
+    
+    player.velocityX = Math.cos(moveAngle) * player.speed;
+    player.velocityY = Math.sin(moveAngle) * player.speed;
+    
+    player.x += player.velocityX;
+    player.y += player.velocityY;
     
     player.x = Math.max(20, Math.min(world.width - 20, player.x));
     player.y = Math.max(20, Math.min(world.height - 20, player.y));
@@ -839,19 +894,72 @@
   }
   
   function drawCar(x, y, angle, color) {
+    var model = carModels[player.model] || carModels[0];
+    
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
     
-    ctx.fillStyle = color;
-    ctx.fillRect(-25, -15, 50, 30);
+    var length = player.length;
+    var width = player.width;
     
-    ctx.fillStyle = '#222222';
-    ctx.fillRect(-15, -12, 20, 24);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 5;
+    ctx.shadowOffsetY = 5;
     
-    ctx.fillStyle = '#88ccff';
-    ctx.fillRect(-12, -10, 8, 20);
-    ctx.fillRect(2, -10, 8, 20);
+    ctx.fillStyle = model.bodyColor;
+    ctx.beginPath();
+    ctx.moveTo(length / 2, 0);
+    ctx.lineTo(length / 3, -width / 2);
+    ctx.lineTo(-length / 3, -width / 2);
+    ctx.lineTo(-length / 2, -width / 3);
+    ctx.lineTo(-length / 2, width / 3);
+    ctx.lineTo(-length / 3, width / 2);
+    ctx.lineTo(length / 3, width / 2);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.shadowColor = 'transparent';
+    
+    ctx.fillStyle = model.windowColor;
+    ctx.beginPath();
+    ctx.moveTo(length / 4, -width / 2 + 4);
+    ctx.lineTo(-length / 4, -width / 2 + 4);
+    ctx.lineTo(-length / 4, width / 2 - 4);
+    ctx.lineTo(length / 4, width / 2 - 4);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.fillStyle = 'rgba(135, 206, 235, 0.6)';
+    ctx.fillRect(-length / 4 + 2, -width / 2 + 6, length / 3, width / 2 - 12);
+    
+    ctx.fillStyle = model.accentColor;
+    ctx.fillRect(-length / 2 + 2, -width / 3, length / 5, width / 1.5);
+    
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.arc(length / 3, -width / 2.5, 5, 0, Math.PI * 2);
+    ctx.arc(length / 3, width / 2.5, 5, 0, Math.PI * 2);
+    ctx.arc(-length / 3, -width / 2.5, 5, 0, Math.PI * 2);
+    ctx.arc(-length / 3, width / 2.5, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(length / 3, -width / 2.5, 2.5, 0, Math.PI * 2);
+    ctx.arc(length / 3, width / 2.5, 2.5, 0, Math.PI * 2);
+    ctx.arc(-length / 3, -width / 2.5, 2.5, 0, Math.PI * 2);
+    ctx.arc(-length / 3, width / 2.5, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#ff3333';
+    ctx.fillRect(-length / 2 - 1, -width / 4, 3, 4);
+    ctx.fillRect(-length / 2 - 1, width / 4 - 4, 3, 4);
+    
+    ctx.fillStyle = '#ffff99';
+    ctx.fillRect(length / 2 - 2, -width / 4, 3, 4);
+    ctx.fillRect(length / 2 - 2, width / 4 - 4, 3, 4);
     
     ctx.restore();
   }
